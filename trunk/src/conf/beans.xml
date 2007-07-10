@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN"
+    "http://www.springframework.org/dtd/spring-beans.dtd">
+<!-- $Id$ -->
+
+<beans>
+    <!-- JMX Beans -->
+    <bean id="mbeanServer"
+            class="org.springframework.jmx.support.MBeanServerFactoryBean">
+        <property name="locateExistingServerIfPossible" value="true"/>
+    </bean>
+
+    <bean id="exporter" class="org.springframework.jmx.export.MBeanExporter" lazy-init="false">
+        <property name="server" ref="mbeanServer"/>
+
+        <property name="beans">
+            <map>
+                <entry key="de.web.management:type=VersionInfo,name=@project.name@" 
+                       value-ref="versionInfo"/>
+            </map>
+        </property>
+
+        <property name="assembler">
+          <bean class="org.springframework.jmx.export.assembler.MethodNameBasedMBeanInfoAssembler">
+            <property name="managedMethods">
+              <value>getValue</value>
+            </property>
+          </bean>
+        </property>
+
+        <!-- Ensure version information is unique -->
+        <property name="registrationBehaviorName"
+                  value="REGISTRATION_FAIL_ON_EXISTING"/>
+    </bean>
+
+    <bean id="versionInfo" class="java.text.Annotation">
+        <constructor-arg>
+            <map>
+                <entry key="name" value="@project.name@"/>
+                <entry key="type" value="application"/>
+                <entry key="version" value="@project.version@"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>
