@@ -68,7 +68,9 @@ class TerminalController extends Thread {
 
 
     TerminalController() {
-        context = new ClassPathXmlApplicationContext("beans.xml")
+        context = new ClassPathXmlApplicationContext(
+            ['applicationContext.xml', 'userContext.xml'] as String[]
+        )
         //def bean = ctx.getBean("bean")
         //System.exit(1)
     }
