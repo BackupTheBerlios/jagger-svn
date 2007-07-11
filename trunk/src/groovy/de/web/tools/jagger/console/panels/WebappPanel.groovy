@@ -58,7 +58,7 @@ class WebappPanel extends PanelBase {
                     BigDecimal avg_time = servlet.processingTime / reqs
 
                     def error_info = "${Fmt.humanCount(errs)} (${Fmt.percent(errs, reqs)})"
-                    if (err_pc > (controller.config.'threshold.request.errors' as BigDecimal))
+                    if (err_pc > (controller.config.props.'threshold.request.errors' as BigDecimal))
                         error_info = alert(error_info)
 
                     content << "${h2(servletname)} (loaded in ${Fmt.humanTime(servlet.loadTime).trim()})"

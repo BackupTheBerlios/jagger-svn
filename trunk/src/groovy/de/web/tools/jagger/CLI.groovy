@@ -21,10 +21,9 @@ import java.io.IOException;
 import java.rmi.ConnectException;
 import javax.management.JMException;
 
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
 import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
+import de.web.tools.jagger.util.Config;
 import de.web.tools.jagger.jmx.*;
 import de.web.tools.jagger.console.TerminalView;
 import de.web.tools.jagger.console.panels.*;
@@ -61,25 +60,15 @@ class TerminalController extends Thread {
     private List errorMessage = []
     private Boolean frozen = false
 
-    def context
     def config
     def mainThread
     volatile Boolean killed = false
 
 
-    TerminalController() {
-        context = new ClassPathXmlApplicationContext(
-            ['applicationContext.xml', 'userContext.xml'] as String[]
-        )
-        //def bean = ctx.getBean("bean")
-        //System.exit(1)
-    }
-
-
     def getCurrentHost() {
         def result = hosts[currentHostIdx]
         if (!result.contains(':')) {
-            result = "${result}:${config.p}"
+            result = "${result}:${config.props.p}"
         }
         return result
     }
@@ -184,7 +173,7 @@ class TerminalController extends Thread {
         currentHostIdx = hostidx
 
         def serverUrl = "service:jmx:rmi:///jndi/rmi://${currentHost}/jmxrmi"
-        def new_agent = new JMXAgentFacade(url: serverUrl, username: config.u, password: config.w)
+        def new_agent = new JMXAgentFacade(url: serverUrl, username: config.props.u, password: config.props.w)
 
         try {
             new_agent.openConnection()
@@ -270,13 +259,13 @@ class TerminalController extends Thread {
 
 
     public void run() {
-        hosts = config.ns
+        hosts = config.props.ns
 
         Boolean error = true
         view = new TerminalView(title: "${License.APPNAME} ${License.APPVERSION}")
         this.COLS = view.COLS
         this.ROWS = view.ROWS
-        panel = config.startPanel
+        panel = config.props.startPanel
 
         selectHost(0)
 
@@ -370,7 +359,7 @@ class CLI {
             name: "Jagger Terminal",
             daemon: true,
             mainThread: Thread.currentThread(),
-            config: config)
+            config: new Config(props: config))
         terminal.start()
 
         while (!terminal.killed) {

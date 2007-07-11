@@ -36,7 +36,7 @@ class ConnectorPanel extends PanelBase {
             }
 
             def error_info = "${Fmt.humanCount(errs)} (${Fmt.percent(errs, reqs)})"
-            if (err_pc > (controller.config.'threshold.request.errors' as BigDecimal))
+            if (err_pc > (controller.config.props.'threshold.request.errors' as BigDecimal))
                 error_info = alert(error_info)
 
             BigDecimal tp_busy_pc = bean.threads.currentThreadsBusy * 100.0 / bean.threads.maxThreads
