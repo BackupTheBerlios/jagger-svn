@@ -11,27 +11,58 @@
 </tr></table>
 <hr size="1" clear="all" />
 
-<div>Jagger is a Java application monitoring tool using JMX technology
+<h2>Overview</h2>
+<p>Jagger is a Java application monitoring tool using JMX technology
 to aggregate, archive and visualize monitoring data for larger computer
 clusters, giving developers and administrators both a succinct and
 comprehensive view into their systems, which normal JMX consoles cannot
-do due to information overflow.</div> 
+do due to information overflow.
+</p>
 
-<hr size="1" />
+<h2>Major features</h2>
 
-Links:
+<ul>
+<li>implemented in Groovy &#8212; flexible, yet fully integrated into J2EE environents.</li>
+<li>console mode with tailored information panels about the state of your JVM, container and applications.</li>
+<li>description of monitoring data model (<i>PLANNED</i>)</li>
+<li>aggregation of distributed mbean data in clustered host setups, exporting the result as mbeans again (<i>PLANNED</i>)</li>
+<li>archival of monitoring data (<i>PLANNED</i>)</li>
+<li>SLA configuration, monitoring and enforcement (<i>PLANNED</i>)</li>
+<!--
+<li></li>
+-->
+</ul>
+
+<img src="http://jagger.berlios.de/img/arch/Composite_Structure_Diagram__Communication.jpg" border="0" alt="Jagger environment"><br />
+<quote>Usage szenarios and system environment of Jagger.</quote>
+
+<h2>Links</h2>
 <dl>
 <dd><a href="http://developer.berlios.de/projects/jagger/">Project page</a></dd>
-<dd><a href="http://openfacts.berlios.de/index-en.phtml?title=JMX_Aggregator">Wiki</a></dd>
+<dd><a href="http://openfacts.berlios.de/index-en.phtml?title=JMX_Aggregator">Project wiki</a></dd>
 <dd><a href="http://developer.berlios.de/feature/?group_id=8650">Features</a> (Roadmap)</dd>
-<dd><a href="http://svn.berlios.de/viewcvs/jagger">SVN</a></dd>
+<dd><a href="https://lists.berlios.de/mailman/listinfo/jagger-users">jagger-users</a> mailing list</dd>
+<dd><a href="http://svn.berlios.de/viewcvs/jagger">SVN repository</a></dd>
 <!--
 <dd><a href=""></a></dd>
 -->
 </dl>
 
+<h2>Console mode</h2>
+<p>The screenshot below is the Tomcat webapps panel of the console mode and shows how you
+can check on the health of your applications with one quick glance, unlike 
+jconsole where it's buried in mostly irrelevant information.
+</p>
+
+<a href="http://developer.berlios.de/dbimage.php?id=3662"><img src="http://developer.berlios.de/dbimage.php?id=3662" width="435" height="230" border="0" title="Jagger Webapps Panel (click to enlarge)" alt="Jagger Webapps Panel"></a>
+
+<p><a href="http://developer.berlios.de/screenshots/?group_id=8650">More screenshots</a> of other panels are available.</p>
+
 <hr size="1" />
-This project is hosted by
-<a href="http://developer.berlios.de/" title="BerliOS Developer"> <img src="http://developer.berlios.de/bslogo.php?group_id=8650" width="124px" height="32px" border="0" alt="BerliOS Developer Logo"></a>
+<small>This project is hosted by
+<a href="http://developer.berlios.de/" title="BerliOS Developer"><img src="http://developer.berlios.de/bslogo.php?group_id=8650" width="124px" height="32px" border="0" alt="BerliOS Developer Logo"></a>
+and sponsored by
+<a href="http://www2.jobs.web.de/" title="WEB.DE"><img src="http://img.web.de/v/jobs/img/webde_logo.gif" width="64" height="60" border="0" alt="WEB.DE Logo"></a>
+</small>
 </body>
 </html>
