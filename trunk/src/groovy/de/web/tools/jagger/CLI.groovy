@@ -97,6 +97,17 @@ class CLI {
         if (config.u == null) return 'No JMX user given'
         if (config.w == null) return 'No JMX password given'
 
+        if (config.p == null) {
+            def have_ports = config.ns.inject(true) {b, i -> b && i.contains(':')}
+            if (!have_ports) return 'No port number given'
+        } else {
+            def portno
+            try { portno = new Integer(config.p) }
+            catch (NumberFormatException exc) { return "Bad port number ${config.p} (${exc})" }
+
+            if (!(portno in 1..65535)) return "Port number not in range 1..65535"
+        }
+
         // decode base64 password, if given in that format
         if (config.w.startsWith('b64:')) {
             config.w = new String(config.w[4..-1].decodeBase64())
