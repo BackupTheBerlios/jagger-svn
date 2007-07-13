@@ -42,7 +42,7 @@ class CLI {
     private addOptions(cli) {
         cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN',  'Tomcat hostname.',
               valueSeparator: ',' as char)
-        cli.p(longOpt: 'port',     args: 1, argName: 'NNN',     'Tomcat JMX port.')
+        cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
         cli.u(longOpt: 'username', args: 1, argName: 'USER',    'JMX username.')
         cli.w(longOpt: 'password', args: 1, argName: 'PWD',     'JMX password.')
     }    
