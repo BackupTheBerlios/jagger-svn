@@ -32,7 +32,7 @@ class Config {
 
     def getContext() {
         if (springContext == null) {
-            synchronized (springContext) {
+            synchronized (this) {
                 if (springContext == null) {
                     springContext = new ClassPathXmlApplicationContext(
                         [APPLICATION_CONTEXT, USER_CONTEXT] as String[]
