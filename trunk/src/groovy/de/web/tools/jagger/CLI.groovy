@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: CLI.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger;
@@ -28,6 +28,7 @@ class CLI {
 
     def config
 
+
     private readDefaults() {
         def defaults = new Properties()
         def defaults_file = new File(DEFAULT_PROPERTIES)
@@ -37,6 +38,7 @@ class CLI {
         return defaults
     }    
 
+
     private addOptions(cli) {
         cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN',  'Tomcat hostname.',
               valueSeparator: ',' as char)
@@ -45,7 +47,13 @@ class CLI {
         cli.w(longOpt: 'password', args: 1, argName: 'PWD',     'JMX password.')
     }    
 
-    private setConfig(cli, options) {
+
+    /** Load configuration (from cmd line and config file) into the
+        "config" property.
+
+        Return error message, or null on success.
+     */
+    private String setConfig(cli, options) {
         def defaults = readDefaults()
         //defaults.store(cli.writer, DEFAULT_PROPERTIES)
         //println options.arguments()
@@ -73,11 +81,6 @@ class CLI {
             config.ns = config.ns.collect { it.trim() }
         }
 
-        // decode base64 password, if given in that format
-        if (config.w.startsWith('b64:')) {
-            config.w = new String(config.w[4..-1].decodeBase64())
-        }
-
         // set other values (not settable on cmd line)
         [
             startPanel: 'j',
@@ -88,13 +91,30 @@ class CLI {
             else
                 config[key] = defaultValue
         }
+
+        // check for configuration errors
+        if (config.ns == null || config.ns.empty) return 'Host list is empty'
+        if (config.u == null) return 'No JMX user given'
+        if (config.w == null) return 'No JMX password given'
+
+        // decode base64 password, if given in that format
+        if (config.w.startsWith('b64:')) {
+            config.w = new String(config.w[4..-1].decodeBase64())
+        }
+
+        return null
     }    
 
+
     private mainloop(cli, options) {
-        setConfig(cli, options)
+        def configError = setConfig(cli, options)
+        if (configError != null) {
+            println("Configuration error: ${configError}")
+            return 1
+        }
 
         def terminal = new TerminalController(
-            name: "Jagger Terminal",
+            name: 'Jagger Terminal',
             daemon: true,
             mainThread: Thread.currentThread(),
             config: new Config(props: config))
@@ -143,6 +163,7 @@ class CLI {
         return 0
     }
 
+
     private process(args) {
         // describe CLI options
         def cli = new CliBuilder(
@@ -178,7 +199,8 @@ class CLI {
 
         return mainloop(cli, options)
     }
-         
+
+ 
     public static main(args) {
         new CLI().process(args)
     }

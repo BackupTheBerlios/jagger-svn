@@ -258,6 +258,9 @@ class TerminalController extends Thread {
     public void run() {
         hosts = config.props.ns
 
+        println config.context.getBean('panels').dump()
+        //System.exit(1)
+
         Boolean error = true
         view = new TerminalView(title: "${License.APPNAME} ${License.APPVERSION}")
         this.COLS = view.COLS
