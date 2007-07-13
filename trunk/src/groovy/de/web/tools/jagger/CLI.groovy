@@ -40,7 +40,7 @@ class CLI {
 
 
     private addOptions(cli) {
-        cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN',  'Tomcat hostname.',
+        cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN,...', 'Comma-separated list of hostnames.',
               valueSeparator: ',' as char)
         cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
         cli.u(longOpt: 'username', args: 1, argName: 'USER',    'JMX username.')
