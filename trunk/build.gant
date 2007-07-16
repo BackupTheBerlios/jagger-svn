@@ -3,8 +3,14 @@ groovyHome = System.getenv().'GROOVY_HOME'
 // validate that 'GROOVY_HOME' has been defined
 if ((groovyHome == null) || (groovyHome == '')) {
   println('Must set environment variable GROOVY_HOME to compile this project.')
-  return
+  return 1
 }
+
+// name & version number of the project
+Ant.property(file: 'build.properties')
+def project_name = Ant.project.properties.'project.name'
+def version = Ant.project.properties.'project.version'
+println "Building ${project_name}-${version}..."
 
 // declare reference to project folders
 def base_dir = new File("").canonicalPath
@@ -23,15 +29,9 @@ def target_classes_dir = "${target_dir}/classes"
 def target_tests_dir = "${target_dir}/tests" 
 def target_reports_dir = "${target_dir}/reports"
 def build_dir = "${target_dir}/build" 
+def build_conf_dir = "${build_dir}/conf" 
 def build_lib_dir = "${build_dir}/lib"
 def build_bin_dir = "${build_dir}/bin"
-
-// name & version number of the project
-Ant.property(file: 'build.properties')
-//println Ant.project.properties
-def project_name = Ant.project.properties.'project.name'
-def version = Ant.project.properties.'project.version'
-println "Building ${project_name}-${version}..."
 
 // name of the deliverable
 zip_name = "${project_name}-${version}.zip"
@@ -73,6 +73,7 @@ task(initialize: 'Initialize prior to a build') {
     Ant.mkdir(dir: target_tests_dir)
     Ant.mkdir(dir: target_reports_dir)
     Ant.mkdir(dir: build_dir)
+    Ant.mkdir(dir: build_conf_dir)
     Ant.mkdir(dir: build_lib_dir)
     Ant.mkdir(dir: build_bin_dir)
 }
@@ -186,6 +187,12 @@ task(build: 'Create a build of the project') {
 
     Ant.copy(todir: build_dir) {
         fileset(dir: docs_dir, includes: '*')
+    }
+
+    // copy user-modifiable configuration files
+    Ant.copy(todir: build_conf_dir) {
+        fileset(dir: conf_dir, includes: 'user*')
+        filterset(refid: 'build-filter')
     }
 
     Ant.copy(todir: build_lib_dir) {

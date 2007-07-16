@@ -139,6 +139,11 @@ class TerminalController extends Thread {
             def currentPanelClass
             synchronized (panel) {
                 currentPanelClass = panels[panel]
+                if (currentPanelClass == null) {
+                    // can happen when unknown start panel is configured
+                    panel = 'h'
+                    currentPanelClass = panels[panel]
+                }
             }
 
             if (currentPanelClass != oldPanelClass) {

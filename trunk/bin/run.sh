@@ -16,7 +16,10 @@ SCRIPTROOT=$(dirname $(dirname $SCRIPT))
 
 # Generate the classpath
 CLASSPATH=$(ls -1 $SCRIPTROOT/lib/*.jar | tr "\n" : | sed -e 's/:$//')${CLASSPATH:+:$CLASSPATH}
-#echo $CLASSPATH
+if test -d $SCRIPTROOT/conf ; then
+    CLASSPATH=$SCRIPTROOT/conf${CLASSPATH:+:$CLASSPATH}
+fi
+#echo $CLASSPATH; exit 1
 
 # Start program
 . "$GROOVY_HOME/bin/startGroovy"
