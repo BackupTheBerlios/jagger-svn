@@ -23,7 +23,8 @@ import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.jmx.*;
 import de.web.tools.jagger.console.TerminalView;
-import de.web.tools.jagger.console.panels.*;
+import de.web.tools.jagger.console.panels.HelpPanel;
+import de.web.tools.jagger.console.panels.AboutPanel;
 
 
 class TerminalController extends Thread {
@@ -34,6 +35,8 @@ class TerminalController extends Thread {
     Integer COLS
     Integer ROWS
 
+    def panels = [:]
+/*
     final panels = [
         ('!'): AboutPanel,
         c: ConnectorPanel,
@@ -45,6 +48,7 @@ class TerminalController extends Thread {
         v: VersionPanel,
         w: WebappPanel,
     ]
+*/
 
     private view
     private agent
@@ -258,8 +262,14 @@ class TerminalController extends Thread {
     public void run() {
         hosts = config.props.ns
 
-        println config.context.getBean('panels').dump()
-        //System.exit(1)
+        // get panel configuration from spring and load panel classes
+        config.context.getBean('panels').each { key, clazz ->
+            panels[key] = this.getClass().forName(clazz, true, this.getClass().getClassLoader())
+        }
+
+        // enforce system panels
+        panels['h'] = HelpPanel
+        panels['!'] = AboutPanel
 
         Boolean error = true
         view = new TerminalView(title: "${License.APPNAME} ${License.APPVERSION}")
