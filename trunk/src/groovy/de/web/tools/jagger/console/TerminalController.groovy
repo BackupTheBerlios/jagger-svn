@@ -108,7 +108,7 @@ class TerminalController extends Thread {
             } catch (ConnectException ex) {
                 // jmx_error
                 if (DEBUG) { killed = true; throw ex }
-            } catch (Throwable t) {
+            } catch (Throwable t) { // catch-and-throw
                 killed = true
                 throw t
             }
