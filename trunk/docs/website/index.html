@@ -37,6 +37,20 @@ do due to information overflow.
 <quote>Usage szenarios and system environment of Jagger.</quote>
 
 
+<h2>Current limitations</h2>
+
+<ul>
+<li>only tested for JVMs that run Tomcat monitored by the JavaServiceWrapper (need feedback from other environments).</li>
+<li>no support for other application servers than Tomcat 5.5 yet (again, need help or feedback).</li>
+<li>since the start script handles the activation of the console RAW mode, Jagger is slightly UNIX-dependant (How do I handle raw keyboard I/O in Java under Windows?)</li>
+<li>version reporting uses WEB.DE standards (see <tt>applicationContext.xml</tt> for an example, you might find that useful for your projects).</li>
+<li>display doesn't adapt to terminal size (yet).</li>
+<!--
+<li></li>
+-->
+</ul>
+
+
 <h2>Console mode</h2>
 <p>The screenshot below is the Tomcat webapps panel of the console mode and shows how you
 can check on the health of your applications with one quick glance, unlike 
