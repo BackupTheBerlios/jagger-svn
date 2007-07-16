@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: HelpPanel.groovy 122039 2007-07-04 16:16:52Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -33,7 +33,7 @@ clusters, giving developers and administrators both a succinct and
 comprehensive view into their systems, which normal JMX consoles cannot do
 due to information overflow.
 
-See http://developer.berlios.de/ for more information.
+See http://jagger.berlios.de/ for more information.
 """.split('\n').each { content << it }
 
         content << ''
