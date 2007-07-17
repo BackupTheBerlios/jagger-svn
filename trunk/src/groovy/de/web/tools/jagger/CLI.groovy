@@ -1,4 +1,4 @@
-/*  jagger - Command Line Interface
+/** jagger - Command Line Interface
 
     Copyright (c) 2007 by 1&1 Internet AG
 
@@ -22,14 +22,31 @@ import de.web.tools.jagger.util.Config;
 import de.web.tools.jagger.console.TerminalController;
 
 
+/**
+ * Command line interface to the JMX text console.
+ * (and later, possibly to the demon via a mode switch)
+ *
+ * This reads the command line options, merges them with
+ * the config files and starts the terminal controller with
+ * the result.
+ */
 class CLI {
+    /** Timeout for thread joining on shutdown. */
     static final JOIN_TIMEOUT = 10000
+
+    /** Name of the properties file with option defaults. */
     static final DEFAULT_PROPERTIES = 'jagger.properties'
 
+    /** The loaded configuration. */
     def config
 
 
-    private readDefaults() {
+    /**
+     * Read option defaults from properties file, if one is found.
+     *
+     * @return The loaded properties.
+     */
+    private Properties readDefaults() {
         def defaults = new Properties()
         def defaults_file = new File(DEFAULT_PROPERTIES)
         if (defaults_file.canRead()) {
@@ -39,7 +56,12 @@ class CLI {
     }    
 
 
-    private addOptions(cli) {
+    /**
+     * Add jagger's options to CLI builder.
+     *
+     * @param cli CLI builder instance
+     */
+    private void addOptions(cli) {
         cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN,...', 'Comma-separated list of hostnames.',
               valueSeparator: ',' as char)
         cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
@@ -48,19 +70,22 @@ class CLI {
     }    
 
 
-    /** Load configuration (from cmd line and config file) into the
-        "config" property.
-
-        Return error message, or null on success.
+    /**
+     * Load configuration (from cmd line and config file) into the
+     * "config" property.
+     *
+     * @param cli CLI builder instance
+     * @param options parsed options
+     * @return error message, or null on success.
      */
     private String setConfig(cli, options) {
+        // first, read default values
         def defaults = readDefaults()
-        //defaults.store(cli.writer, DEFAULT_PROPERTIES)
-        //println options.arguments()
 
-        // set defaults, if no cmd line option given
+        // collect options, use default if not given on cmd line
         config = [:]
         [
+            // list of option names and property names to check
             ns: 'jagger.host',
             p:  'jagger.port',
             u:  'jagger.monitor.user',
@@ -74,10 +99,13 @@ class CLI {
 
         // convert hostlist string to host list
         if (String.isInstance(config.ns)) {
+            // split by comma if possible, else by space
             if (config.ns.contains(','))
                 config.ns = config.ns.tokenize(',')
             else
                 config.ns = config.ns.tokenize()
+
+            // if we split by comma, remove extraneous spacing
             config.ns = config.ns.collect { it.trim() }
         }
 
@@ -113,17 +141,28 @@ class CLI {
             config.w = new String(config.w[4..-1].decodeBase64())
         }
 
+        // all is fine and dandy
         return null
     }    
 
 
+    /**
+     * Start everything up, coordinate the running threads and
+     * finally try to shut down cleanly.
+     *
+     * @param cli CLI builder instance
+     * @param options parsed options
+     * @return exit code
+     */
     private mainloop(cli, options) {
+        // load merged config
         def configError = setConfig(cli, options)
         if (configError != null) {
             println("Configuration error: ${configError}")
             return 1
         }
 
+        // create terminal controller and start it
         def terminal = new TerminalController(
             name: 'Jagger Terminal',
             daemon: true,
@@ -131,27 +170,37 @@ class CLI {
             config: new Config(props: config))
         terminal.start()
 
+        // loop while not asked to shut down
         while (!terminal.killed) {
             // Wait for user input
             def key = (System.in.read() as Character) as String
             //print "KEY $key ${key[0] as Integer}  "
+
+            // handle some global keys here
             switch (key) {
+                // exit
                 case 'q': case 'Q':
                 case 'x': case 'X':
+                    // set shutdown flag and wake up controller
                     terminal.killed = true
                     terminal.interrupt()
                     break
 
+                // map '?' to 'h'
                 case '?':
                     terminal.keyPressed('h')
                     break
 
+                // handle function and special keys
                 case '\033':
+                    // single escape or escape sequence?
                     if (System.in.available()) {
+                        // read up to 3 more bytes
                         def buf = '   ' as byte[]
                         def buflen = System.in.read(buf, 0, 3)
                         def keyseq = new String(buf)
 
+                        // map ANSI sequences to "virtual" keys
                         switch (keyseq) {
                             case '[A ': key = 'UP';     break
                             case '[B ': key = 'DOWN';   break
@@ -165,29 +214,38 @@ class CLI {
                     // fallthrough
 
                 default:
+                    // hand anything else off to controller
                     terminal.keyPressed(key)
                     break
             }
         }
+
+        // wait for controller to shut down; if timeout strikes, we're good
+        // since controller is a daemon.
         terminal.join(JOIN_TIMEOUT)
 
         return 0
     }
 
 
+    /**
+     * Process command line options and start mainloop.
+     *
+     * @param args command line argument array
+     * @return exit code
+     */
     private process(args) {
-        // describe CLI options
+        // describe common CLI options
         def cli = new CliBuilder(
             usage: "${License.APPNAME} [options]",
             writer: new PrintWriter(System.out)
         )
         cli.h(longOpt: 'help', 'Show this help message.')
         cli.v(longOpt: 'version', 'Show version information.')
+        cli.Y(longOpt: 'warranty', 'Show warranty information.')
+        cli.Z(longOpt: 'license', 'Show license information.')
 
-        // hmmm, no way to have long option only...
-        cli.y(longOpt: 'warranty', 'Show warranty information.')
-        cli.z(longOpt: 'license', 'Show license information.')
-
+        // add tool specific options
         addOptions(cli)
 
         // parse options and do standard processing
@@ -205,15 +263,23 @@ class CLI {
             return 1
         }
         if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
-        if (options.y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
-        if (options.z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
+        if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
+        if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
 
+        // get things going
         return mainloop(cli, options)
     }
 
  
+    /**
+     * The jagger main.
+     *
+     * @param args command line argument array
+     * @return exit code
+     */
     public static main(args) {
-        new CLI().process(args)
+        // delegate to instance of this class
+        return new CLI().process(args)
     }
 }
 
