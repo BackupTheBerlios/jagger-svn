@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: JvmFacade.groovy 122570 2007-07-06 07:58:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.jmx;
@@ -154,6 +154,7 @@ class JvmFacade {
         }
     }
 
+    // get runtime versions
     def getVersions() {
         cachable('Versions') {
             [
@@ -162,5 +163,15 @@ class JvmFacade {
             ]
         }
     }
+
+    // get component version info (using WEB.DE standards)
+    def getComponents() {
+        def result = []
+        agent.queryBeans('de.web.management:type=VersionInfo,*') { name, bean ->
+            result << bean.Value
+        }
+        return result
+    }
+
 }
 

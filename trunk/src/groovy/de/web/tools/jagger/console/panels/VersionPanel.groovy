@@ -35,25 +35,20 @@ class VersionPanel extends PanelBase {
         controller.jvm.versions.each(dumpVersion)
         controller.tomcat.versions.each(dumpVersion)
 
-        // assemble version info
-        def components = []
-        controller.agent.queryBeans('de.web.management:type=VersionInfo,*') { name, bean ->
-            components << bean.Value
-        }
-
-        def bytype = new TreeMap()
-        components.each {
-            if (!bytype.containsKey(it.type))
-                bytype[it.type] = new TreeMap()
-            bytype[it.type][it.name] = it.version
+        // assemble component version info
+        def componentsByType = new TreeMap()
+        controller.jvm.components.each {
+            if (!componentsByType.containsKey(it.type))
+                componentsByType[it.type] = new TreeMap()
+            componentsByType[it.type][it.name] = it.version
         }
 
         def padding = controller.view.COLS - INDENT - 15
-        bytype.each { componentType, componentList ->
+        componentsByType.each { componentType, componentMap ->
             content << ''
             content << h1("${componentType} versions")
 
-            componentList.each { name, version ->
+            componentMap.each { name, version ->
                 content << "${''.padLeft(INDENT)} ${name.padRight(padding)} $version"
             }
         }
