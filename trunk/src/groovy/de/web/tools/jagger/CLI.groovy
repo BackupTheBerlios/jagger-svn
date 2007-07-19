@@ -74,6 +74,8 @@ class CLI {
      * Load configuration (from cmd line and config file) into the
      * "config" property.
      *
+     * XXX Should go to Config class!
+     *
      * @param cli CLI builder instance
      * @param options parsed options
      * @return error message, or null on success.
