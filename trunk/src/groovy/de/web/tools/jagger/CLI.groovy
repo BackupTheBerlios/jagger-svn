@@ -1,4 +1,5 @@
-/** jagger - Command Line Interface
+/*
+    jagger - Command Line Interface
 
     Copyright (c) 2007 by 1&1 Internet AG
 
@@ -24,7 +25,7 @@ import de.web.tools.jagger.console.TerminalController;
 
 /**
  * Command line interface to the JMX text console.
- * (and later, possibly to the demon via a mode switch)
+ * (and later, possibly to the demon via a mode switch).
  *
  * This reads the command line options, merges them with
  * the config files and starts the terminal controller with
