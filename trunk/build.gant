@@ -115,7 +115,7 @@ task(initialize: 'Initialize prior to a build') {
     download libraries we're depending on
 */
 task(download: "download libraries we're depending on") {
-    // create chae dir
+    // create cache dir
     Ant.mkdir(dir: jar_cache)
 
     // download all given dependencies to cache, if not there
