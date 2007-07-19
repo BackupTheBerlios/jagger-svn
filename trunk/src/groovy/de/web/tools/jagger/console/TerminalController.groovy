@@ -83,6 +83,8 @@ class TerminalController extends Thread {
 
 
     private synchronized makePanel(currentPanelClass) {
+        assert agent != null || errorMessage.size() > 0
+
         def content = []
 
         if (agent == null) {
@@ -152,7 +154,6 @@ class TerminalController extends Thread {
             }
 
             if (!frozen) {
-                assert agent != null || errorMessage.size() > 0
                 content = makePanel(currentPanelClass)
                 if (content == null) continue
             } else if (!view.panel.endsWith(FROZEN_TAG)) {
