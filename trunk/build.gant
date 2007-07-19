@@ -7,6 +7,7 @@
 
 import org.codehaus.groovy.runtime.InvokerHelper;
 
+
 groovyHome = System.getenv().'GROOVY_HOME'
 
 // validate that 'GROOVY_HOME' has been defined
@@ -22,7 +23,7 @@ has_groovydoc = !groovyVersion.startsWith('1.0')
 Ant.property(file: 'build.properties')
 def project_name = Ant.project.properties.'project.name'
 def version = Ant.project.properties.'project.version'
-println "Building ${project_name}-${version}..."
+Ant.echo(message: "Building ${project_name}-${version}...")
 
 // declare reference to project folders
 def base_dir = new File("").canonicalPath
@@ -34,6 +35,9 @@ def groovy_tests_dir = "${base_dir}/tests_src/groovy"
 def bin_dir = "${base_dir}/bin"
 def docs_dir = "${base_dir}/docs"
 def lib_dir = "${base_dir}/lib"
+def cache_dir = "${base_dir}/.cache" 
+def jar_cache = cache_dir + "/jars"
+def jar_dependencies = []
 
 // declare folders used to create build artifacts
 def target_dir = "${base_dir}/target"
@@ -56,6 +60,14 @@ cleanDirectory << target_dir
 clobberDirectory << [target_dir]
 
 
+// package formats
+package_formats = [
+    tgz: [task: 'tar', extension: 'tar.gz',  args: [compression: 'gzip']],
+    bz2: [task: 'tar', extension: 'tar.bz2', args: [compression: 'bzip2']],
+    zip: [task: 'zip', extension: 'zip',     args: [:]],
+]
+
+
 // name of deliverables
 def artifactName(tag, extension) {
     // XXX Any way to access the outer scope statically?
@@ -67,23 +79,11 @@ def artifactName(tag, extension) {
 }
 
 
-// declare the classpath used to compile 
-Ant.path(id: 'compile_classpath') { 
-    fileset(dir: groovyHome + '/lib', includes: '*.jar') 
-    fileset(dir: lib_dir, includes: '*.jar')
-}
-
-
-// declare the groovy compiler task
-Ant.taskdef(name: 'groovyc',
-    classname: 'org.codehaus.groovy.ant.Groovyc',
-    classpathref: 'compile_classpath')
-
-
 /*
     create the folders required by the build
 */
 task(initialize: 'Initialize prior to a build') {
+    // create target directories
     Ant.mkdir(dir: target_dir)
     Ant.mkdir(dir: target_docs_dir)
     Ant.mkdir(dir: target_classes_dir)
@@ -93,6 +93,49 @@ task(initialize: 'Initialize prior to a build') {
     Ant.mkdir(dir: build_conf_dir)
     Ant.mkdir(dir: build_lib_dir)
     Ant.mkdir(dir: build_bin_dir)
+
+    // download dependant JARs
+    depends(download)
+
+    // declare the classpath used to compile 
+    Ant.path(id: 'compile_classpath') { 
+        fileset(dir: groovyHome + '/lib', includes: '*.jar') 
+        fileset(dir: lib_dir, includes: '*.jar')
+        fileset(dir: jar_cache, includes: '*.jar')
+    }
+
+    // declare the groovy compiler task
+    Ant.taskdef(name: 'groovyc',
+        classname: 'org.codehaus.groovy.ant.Groovyc',
+        classpathref: 'compile_classpath')
+}
+
+
+/*
+    download libraries we're depending on
+*/
+task(download: "download libraries we're depending on") {
+    // create chae dir
+    Ant.mkdir(dir: jar_cache)
+
+    // download all given dependencies to cache, if not there
+    def cached_jars = []
+    Ant.project.properties.each { key, val ->
+        if (key.startsWith('dependency.') && key.endsWith('.url')) {
+            def url = new URL(val)
+            def jarname = new File(url.path).name
+            def jarfile = new File("${jar_cache}/${jarname}")
+            if (jarfile.canRead()) {
+                cached_jars << jarname
+            } else {
+                Ant.get(src: val, dest: jarfile.absolutePath,
+                    verbose: 'true', usetimestamp: 'true')
+            }
+            
+            jar_dependencies << jarname
+        }
+    }
+    Ant.echo(message: "Using ${cached_jars.join(', ')} from cache.")
 }
 
 
@@ -103,10 +146,12 @@ task(initialize: 'Initialize prior to a build') {
 */
 task(compile: 'Compile all classes.') {
     depends(initialize)
+
     Ant.javac(srcdir: java_source_dir, destDir: target_classes_dir,
         source: Ant.project.properties.'java.source',
         target: Ant.project.properties.'java.target',
         debug: 'on', classpathref: 'compile_classpath')
+
     Ant.groovyc(srcdir: groovy_source_dir, destDir: target_classes_dir){
         classpath {
             path(refid: 'compile_classpath')
@@ -244,6 +289,7 @@ task(build: 'Create a build of the project') {
     // copy jars
     Ant.copy(todir: build_lib_dir) {
         fileset(dir: lib_dir, includes: '*')
+        fileset(dir: jar_cache, includes: jar_dependencies.join(','))
     }
 }
 
@@ -264,12 +310,23 @@ task('dist': 'Create a full source distribution of the project') {
     // don't collide with binary distribution paths!
     root = "${project_name}-${version}-src"
 
-    // build ZIP file
-    Ant.zip(destfile: "${target_dir}/${artifactName('src', 'zip')}") {
-        zipfileset(dir: '.', prefix: root, includes: src_files)
-        if (has_groovydoc) {
-            zipfileset(dir: target_docs_dir, prefix: root + "/docs/api")
-        }
+    // build distribution files
+    package_formats.each { format, info ->
+        def args = info.args.clone()
+        args.taskName = "src-${format}"
+        args.destfile = "${target_dir}/${artifactName('src', info.extension)}"
+
+        Ant.&invokeMethod(info.task, [args,
+            {
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: '.', prefix: root, includes: src_files])
+
+                if (has_groovydoc) {
+                    Ant.&invokeMethod("${info.task}fileset", [
+                        dir: target_docs_dir, prefix: root + "/docs/api"])
+                }
+            }
+        ])
     }
 }
 
@@ -282,8 +339,15 @@ task('package': 'Create a full binary distribution of the project') {
 
     root = "${project_name}-${version}"
 
-    Ant.zip(destfile: "${target_dir}/${artifactName('bin', 'zip')}") {
-        zipfileset(dir: build_dir, prefix: root)
+    // build distribution files
+    package_formats.each { format, info ->
+        def args = info.args.clone()
+        args.taskName = "bin-${format}"
+        args.destfile = "${target_dir}/${artifactName('bin', info.extension)}"
+
+        Ant.&invokeMethod(info.task, [args,
+            { Ant.&invokeMethod("${info.task}fileset", [dir: build_dir, prefix: root]) }
+        ])
     }
 }
 
