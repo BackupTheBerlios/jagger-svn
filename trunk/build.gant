@@ -168,6 +168,7 @@ task(compile: 'Compile all classes.') {
 */
 task(compile_tests: 'Compile all the tests.') {
     depends(compile)
+
     Ant.javac(srcdir: java_tests_dir,
             destDir: target_tests_dir,
             source: '1.4', target: '1.4', debug: 'on') {
@@ -176,6 +177,7 @@ task(compile_tests: 'Compile all the tests.') {
             pathelement(location: target_classes_dir)
         }
     }
+
     Ant.groovyc(srcdir: groovy_tests_dir,
             destdir: target_tests_dir) {
         classpath {
@@ -191,11 +193,14 @@ task(compile_tests: 'Compile all the tests.') {
 */
 task(test: 'Run all the tests in the build.') {
     depends(compile_tests)
+
     Ant.junit(printsummary: 'yes') {
         formatter(type: 'plain')
+
         batchtest(fork: 'yes', todir: target_reports_dir) {
             fileset(dir: target_tests_dir, includes: '**/*Test.class')
         }
+
         classpath {
             pathelement(location: target_tests_dir)
             pathelement(location: target_classes_dir)
@@ -305,6 +310,7 @@ task('dist': 'Create a full source distribution of the project') {
     }
 
     // get list of source files from SVN
+    Ant.echo(taskname: 'svn', message: 'Getting list of source files...')
     src_files = 'svn ls -R .'.execute().text.trim().replace('\n', ',')
 
     // don't collide with binary distribution paths!
