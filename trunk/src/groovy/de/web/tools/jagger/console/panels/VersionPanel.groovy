@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: VersionPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -21,6 +21,8 @@ import de.web.tools.jagger.util.Fmt;
 
 
 class VersionPanel extends PanelBase {
+    static final INDENT = 10
+
     static final name = 'Versions'
     static final description = 'Component versions'
 
@@ -28,14 +30,33 @@ class VersionPanel extends PanelBase {
         content << ''
         content << h1('Runtime versions')
         def dumpVersion = { name, version ->
-            content << "${name.padLeft(10)} $version"
+            content << "${name.padLeft(INDENT)} $version"
         }
         controller.jvm.versions.each(dumpVersion)
         controller.tomcat.versions.each(dumpVersion)
 
-        content << ''
-        content << h1('Component versions')
+        // assemble version info
+        def components = []
+        controller.agent.queryBeans('de.web.management:type=VersionInfo,*') { name, bean ->
+            components << bean.Value
+        }
 
+        def bytype = new TreeMap()
+        components.each {
+            if (!bytype.containsKey(it.type))
+                bytype[it.type] = new TreeMap()
+            bytype[it.type][it.name] = it.version
+        }
+
+        def padding = controller.view.COLS - INDENT - 15
+        bytype.each { componentType, componentList ->
+            content << ''
+            content << h1("${componentType} versions")
+
+            componentList.each { name, version ->
+                content << "${''.padLeft(INDENT)} ${name.padRight(padding)} $version"
+            }
+        }
     }
 }
 
