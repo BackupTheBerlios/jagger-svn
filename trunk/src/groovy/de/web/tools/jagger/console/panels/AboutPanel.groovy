@@ -17,6 +17,8 @@
 
 package de.web.tools.jagger.console.panels;
 
+import org.codehaus.groovy.runtime.InvokerHelper;
+
 import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
 
@@ -36,6 +38,12 @@ due to information overflow.
 See http://jagger.berlios.de/ for more information.
 """.split('\n').each { content << it }
 
+        content << ''
+        content << h1('Versions')
+        content << "${label('JVM')} ${System.getProperty('java.version')} (${System.getProperty('java.vm.vendor')}${System.getProperty('java.vm.version')})"
+        content << "${label('Groovy')} ${InvokerHelper.getVersion()}"
+        content << "${label('Jagger')} ${License.APPVERSION}"
+ 
         content << ''
         content << h1('Copyright')
         License.COPYRIGHT.split('\n').each { content << it }
