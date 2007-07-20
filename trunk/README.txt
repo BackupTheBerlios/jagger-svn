@@ -20,3 +20,9 @@ clusters, giving developers and administrators both a succinct and
 comprehensive view into their systems, which normal JMX consoles cannot do
 due to information overflow.
 
+To learn more about the licensing conditions applying to this software, see
+the "LICENSE.txt" file.
+
+For instructions on how to install the software on your computer, read
+"INSTALL.txt".
+

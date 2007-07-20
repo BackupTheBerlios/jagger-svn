@@ -1,5 +1,22 @@
 #!/bin/sh
+#
+# jagger - Startup wrapper for UNIX
+#
+# Copyright (c) 2007 by 1&1 Internet AG
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation. A copy of this license is
+# included with this software in the file "LICENSE.txt".
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# $Id$
 
+# if you really like to hit RETURN often, change to false
 RAW=true
 
 if test -z $GROOVY_HOME; then
@@ -15,9 +32,9 @@ esac
 SCRIPTROOT=$(dirname $(dirname $SCRIPT))
 
 # Generate the classpath
-CLASSPATH=$(ls -1 $SCRIPTROOT/lib/*.jar | tr "\n" : | sed -e 's/:$//')${CLASSPATH:+:$CLASSPATH}
-if test -d $SCRIPTROOT/conf ; then
-    CLASSPATH=$SCRIPTROOT/conf${CLASSPATH:+:$CLASSPATH}
+CLASSPATH=$(ls -1 $SCRIPTROOT/@lib_path@/*.jar | tr "\n" : | sed -e 's/:$//')${CLASSPATH:+:$CLASSPATH}
+if test -d $SCRIPTROOT/@conf_path@ ; then
+    CLASSPATH=$SCRIPTROOT/@conf_path@${CLASSPATH:+:$CLASSPATH}
 fi
 #echo $CLASSPATH; exit 1
 

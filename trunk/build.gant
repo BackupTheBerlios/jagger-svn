@@ -35,7 +35,7 @@ def groovy_tests_dir = "${base_dir}/tests_src/groovy"
 def bin_dir = "${base_dir}/bin"
 def docs_dir = "${base_dir}/docs"
 def lib_dir = "${base_dir}/lib"
-def cache_dir = "${base_dir}/.cache" 
+def cache_dir = "${base_dir}/.buildcache" 
 def jar_cache = cache_dir + "/jars"
 def jar_dependencies = []
 
@@ -45,10 +45,19 @@ def target_docs_dir = "${target_dir}/docs"
 def target_classes_dir = "${target_dir}/classes" 
 def target_tests_dir = "${target_dir}/tests" 
 def target_reports_dir = "${target_dir}/reports"
+
+// declare installation structure
+def bin_path = 'bin'
+def lib_path = "share/${project_name}-${version}/lib"
+def conf_path = "share/${project_name}-${version}/conf"
+def doc_path = "share/doc/${project_name}-${version}"
+
+// declare folders used to create distribution artifacts
 def build_dir = "${target_dir}/${project_name}-${version}" 
-def build_conf_dir = "${build_dir}/conf" 
-def build_lib_dir = "${build_dir}/lib"
-def build_bin_dir = "${build_dir}/bin"
+def build_bin_dir = "${build_dir}/${bin_path}"
+def build_lib_dir = "${build_dir}/${lib_path}"
+def build_doc_dir = "${build_dir}/${doc_path}"
+def build_conf_dir = "${build_dir}/${conf_path}"
 
 // The name of the jar file containing the project's Groovy and Java classes
 jar_name = "${project_name}-${version}.jar"
@@ -89,10 +98,12 @@ task(initialize: 'Initialize prior to a build') {
     Ant.mkdir(dir: target_classes_dir)
     Ant.mkdir(dir: target_tests_dir)
     Ant.mkdir(dir: target_reports_dir)
+
     Ant.mkdir(dir: build_dir)
     Ant.mkdir(dir: build_conf_dir)
     Ant.mkdir(dir: build_lib_dir)
     Ant.mkdir(dir: build_bin_dir)
+    Ant.mkdir(dir: build_doc_dir)
 
     // download dependant JARs
     depends(download)
@@ -245,6 +256,10 @@ task(build: 'Create a build of the project') {
     }
     Ant.filterset(id: 'build-filter') {
         filtersfile(file: "${target_dir}/build-filter.properties")
+        filter(token: 'bin_path',  value: bin_path)
+        filter(token: 'lib_path',  value: lib_path)
+        filter(token: 'conf_path', value: conf_path)
+        filter(token: 'doc_path',  value: doc_path)
     }
 
     // copy configuration files
@@ -280,14 +295,14 @@ task(build: 'Create a build of the project') {
     Ant.chmod(dir: build_bin_dir, includes: '*', perm: '+x')
 
     // copy docs
-    Ant.copy(todir: build_dir) {
+    Ant.copy(todir: build_doc_dir) {
         fileset(dir: '.', includes: '*.txt')
     }
-    Ant.copy(todir: build_dir + '/docs') {
+    Ant.copy(todir: build_doc_dir) {
         fileset(dir: docs_dir, includes: '*.txt')
         fileset(dir: docs_dir + '/website', includes: '**')
     }
-    Ant.copy(todir: build_dir + '/docs/img/arch') {
+    Ant.copy(todir: build_doc_dir + '/img/arch') {
         fileset(dir: docs_dir + '/arch', includes: '**/*.jpg')
     }
 
