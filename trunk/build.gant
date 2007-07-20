@@ -49,6 +49,7 @@ def target_reports_dir = "${target_dir}/reports"
 // declare installation structure
 def bin_path = 'bin'
 def lib_path = "share/${project_name}-${version}/lib"
+def share_path = "share/${project_name}-${version}"
 def conf_path = "share/${project_name}-${version}/conf"
 def doc_path = "share/doc/${project_name}-${version}"
 
@@ -56,8 +57,9 @@ def doc_path = "share/doc/${project_name}-${version}"
 def build_dir = "${target_dir}/${project_name}-${version}" 
 def build_bin_dir = "${build_dir}/${bin_path}"
 def build_lib_dir = "${build_dir}/${lib_path}"
-def build_doc_dir = "${build_dir}/${doc_path}"
+def build_share_dir = "${build_dir}/${share_path}"
 def build_conf_dir = "${build_dir}/${conf_path}"
+def build_doc_dir = "${build_dir}/${doc_path}"
 
 // The name of the jar file containing the project's Groovy and Java classes
 jar_name = "${project_name}-${version}.jar"
@@ -71,9 +73,9 @@ clobberDirectory << [target_dir]
 
 // package formats
 package_formats = [
-    tgz: [task: 'tar', extension: 'tar.gz',  args: [compression: 'gzip']],
-    bz2: [task: 'tar', extension: 'tar.bz2', args: [compression: 'bzip2']],
-    zip: [task: 'zip', extension: 'zip',     args: [:]],
+    tgz: [task: 'tar', extension: 'tar.gz',  modename: 'mode',     args: [compression: 'gzip']],
+    bz2: [task: 'tar', extension: 'tar.bz2', modename: 'mode',     args: [compression: 'bzip2']],
+    zip: [task: 'zip', extension: 'zip',     modename: 'filemode', args: [:]],
 ]
 
 
@@ -146,7 +148,9 @@ task(download: "download libraries we're depending on") {
             jar_dependencies << jarname
         }
     }
-    Ant.echo(message: "Using ${cached_jars.join(', ')} from cache.")
+    if (!cached_jars.isEmpty()) {
+        Ant.echo(message: "Using ${cached_jars.join(', ')} from cache.")
+    }
 }
 
 
@@ -298,6 +302,9 @@ task(build: 'Create a build of the project') {
     Ant.copy(todir: build_doc_dir) {
         fileset(dir: '.', includes: '*.txt')
     }
+    Ant.copy(todir: build_doc_dir + '/samples') {
+        fileset(dir: '.', includes: 'jagger.properties')
+    }
     Ant.copy(todir: build_doc_dir) {
         fileset(dir: docs_dir, includes: '*.txt')
         fileset(dir: docs_dir + '/website', includes: '**')
@@ -367,7 +374,12 @@ task('package': 'Create a full binary distribution of the project') {
         args.destfile = "${target_dir}/${artifactName('bin', info.extension)}"
 
         Ant.&invokeMethod(info.task, [args,
-            { Ant.&invokeMethod("${info.task}fileset", [dir: build_dir, prefix: root]) }
+            {
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: build_dir, prefix: root, excludes: 'bin/*'])
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: build_dir, prefix: root, includes: 'bin/*', (info.modename): '755'])
+            }
         ])
     }
 }
