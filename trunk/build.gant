@@ -291,7 +291,6 @@ task(build: 'Create a build of the project') {
     Ant.copy(todir: build_bin_dir) {
         fileset(dir: bin_dir, includes: '*.sh')
         mapper {
-            globmapper(from: 'run.sh', to: project_name)
             globmapper(from: '*.sh', to: '*')
         }
         filterset(refid: 'build-filter')

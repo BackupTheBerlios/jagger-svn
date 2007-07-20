@@ -1,5 +1,4 @@
-/*
-    jagger - Command Line Interface
+/*  jagger - Command Line Interface
 
     Copyright (c) 2007 by 1&1 Internet AG
 

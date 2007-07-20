@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: Fmt.groovy 122571 2007-07-06 08:10:51Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.util;
@@ -101,7 +101,7 @@ class Fmt {
         }
     }
 
-    static percent(part, whole, fmtstr = null) {
+    static percent(part, whole = 100.0, fmtstr = null) {
         if (fmtstr == null) fmtstr = "%.1f%%"
 
         Double pc = 0.0

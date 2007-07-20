@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: ConnectorPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -46,7 +46,7 @@ class ConnectorPanel extends PanelBase {
             content << h1("Connector '$name'") + " @ ${controller.currentHost}"
             content << "${label('Requests')} ${Fmt.humanCount(reqs)} / errors $error_info"
             content << "${label('Processing time')} avg. ${Fmt.humanTime(avg_time)} / max. ${Fmt.humanTime(bean.requests.maxTime)} / total ${Fmt.daysTime(bean.requests.processingTime / 1000.0)}"
-            content << "${label('Thread pool')} busy ${Fmt.humanCount(bean.threads.currentThreadsBusy)}${String.format(Locale.US, " (%.1f%%)", tp_busy_pc)} / size ${Fmt.humanCount(bean.threads.currentThreadCount)}${String.format(Locale.US, " (%.1f%%)", tp_slot_pc)} / max. ${Fmt.humanCount(bean.threads.maxThreads)}"
+            content << "${label('Thread pool')} busy ${Fmt.humanCount(bean.threads.currentThreadsBusy)} (${Fmt.percent(tp_busy_pc)}) / size ${Fmt.humanCount(bean.threads.currentThreadCount)} (${Fmt.percent(tp_slot_pc)}) / max. ${Fmt.humanCount(bean.threads.maxThreads)}"
             content << "${label('Traffic')} in ${Fmt.humanSize(bean.requests.bytesReceived)} / out ${Fmt.humanSize(bean.requests.bytesSent)}"
             //content << "${label('Proxy')} ${proxyName}:${proxyPort} [${redirectPort}]"
         }

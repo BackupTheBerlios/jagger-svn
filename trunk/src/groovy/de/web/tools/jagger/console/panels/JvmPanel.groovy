@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: JvmPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -37,10 +37,10 @@ class JvmPanel extends PanelBase {
         content << h1('General')
         content << "${label('Start time')} ${dtf.format(controller.jvm.startTime)} (up ${Fmt.daysTime(controller.jvm.uptime)})"
         content << "${label('JVM ID')} ${controller.jvm.ID} (#${controller.tomcat.JVMId})"
-        content << "${label('Classes')} loaded ${Fmt.humanCount(cld.loaded)} / unloaded ${Fmt.humanCount(cld.unloaded)} (${String.format(Locale.US, "%.1f%%", uld_pc)}) / total ${Fmt.humanCount(cld.total)}"
+        content << "${label('Classes')} loaded ${Fmt.humanCount(cld.loaded)} / unloaded ${Fmt.humanCount(cld.unloaded)} (${Fmt.percent(uld_pc)}) / total ${Fmt.humanCount(cld.total)}"
         content << "${label('Threads')} ${Fmt.humanCount(controller.jvm.threadCount)} / peak ${Fmt.humanCount(controller.jvm.peakThreadCount)}"
         content << "${label('CPU time')} ${Fmt.daysTime(controller.jvm.CPUTime)} (${String.format(Locale.US, "%.2f%%", load_pc)})"
-        content << "${label('Handles')} ${Fmt.humanCount(controller.jvm.openHandles)} (${String.format(Locale.US, "%.1f%%", handle_pc)}) / max. ${Fmt.humanCount(controller.jvm.maxHandles)}"
+        content << "${label('Handles')} ${Fmt.humanCount(controller.jvm.openHandles)} (${Fmt.percent(handle_pc)}) / max. ${Fmt.humanCount(controller.jvm.maxHandles)}"
 
         content << ''
         content << h1('Memory') + " (more on 'm'emory panel)"
