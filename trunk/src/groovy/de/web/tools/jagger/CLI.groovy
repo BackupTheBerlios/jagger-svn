@@ -23,28 +23,33 @@ import de.web.tools.jagger.console.TerminalController;
 
 
 /**
- * Command line interface to the JMX text console.
- * (and later, possibly to the demon via a mode switch).
+ *  Command line interface to the JMX text console.
+ *  (and later, possibly to the demon via a mode switch).
  *
- * This reads the command line options, merges them with
- * the config files and starts the terminal controller with
- * the result.
+ *  This reads the command line options, merges them with
+ *  the config files and starts the terminal controller with
+ *  the result.
  */
 class CLI {
-    /** Timeout for thread joining on shutdown. */
+    /* Timeout for thread joining on shutdown. */
     static final JOIN_TIMEOUT = 10000
 
-    /** Name of the properties file with option defaults. */
+    /* Name of the properties file with option defaults. */
     static final DEFAULT_PROPERTIES = 'jagger.properties'
 
-    /** The loaded configuration. */
+    /* The loaded configuration. */
     def config
 
 
     /**
-     * Read option defaults from properties file, if one is found.
+     *  CLI instances are only created by main().
+     */
+    private CLI() {}
+
+    /**
+     *  Read option defaults from properties file, if one is found.
      *
-     * @return The loaded properties.
+     *  @return The loaded properties.
      */
     private Properties readDefaults() {
         def defaults = new Properties()
@@ -57,9 +62,9 @@ class CLI {
 
 
     /**
-     * Add jagger's options to CLI builder.
+     *  Add jagger's options to CLI builder.
      *
-     * @param cli CLI builder instance
+     *  @param cli CLI builder instance
      */
     private void addOptions(cli) {
         cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN,...', 'Comma-separated list of hostnames.',
@@ -71,14 +76,14 @@ class CLI {
 
 
     /**
-     * Load configuration (from cmd line and config file) into the
-     * "config" property.
+     *  Load configuration (from cmd line and config file) into the
+     *  "config" property.
      *
-     * XXX Should go to Config class!
+     *  XXX Should go to Config class!
      *
-     * @param cli CLI builder instance
-     * @param options parsed options
-     * @return error message, or null on success.
+     *  @param cli CLI builder instance
+     *  @param options parsed options
+     *  @return error message, or null on success.
      */
     private String setConfig(cli, options) {
         // first, read default values
@@ -149,12 +154,12 @@ class CLI {
 
 
     /**
-     * Start everything up, coordinate the running threads and
-     * finally try to shut down cleanly.
+     *  Start everything up, coordinate the running threads and
+     *  finally try to shut down cleanly.
      *
-     * @param cli CLI builder instance
-     * @param options parsed options
-     * @return exit code
+     *  @param cli CLI builder instance
+     *  @param options parsed options
+     *  @return exit code
      */
     private mainloop(cli, options) {
         // load merged config
@@ -231,10 +236,10 @@ class CLI {
 
 
     /**
-     * Process command line options and start mainloop.
+     *  Process command line options and start mainloop.
      *
-     * @param args command line argument array
-     * @return exit code
+     *  @param args command line argument array
+     *  @return exit code
      */
     private process(args) {
         // describe common CLI options
@@ -274,10 +279,10 @@ class CLI {
 
  
     /**
-     * The jagger main.
+     *  The jagger main.
      *
-     * @param args command line argument array
-     * @return exit code
+     *  @param args command line argument array
+     *  @return exit code
      */
     public static main(args) {
         // delegate to instance of this class
