@@ -17,6 +17,9 @@
 
 package de.web.tools.jagger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.util.Config;
 import de.web.tools.jagger.console.TerminalController;
@@ -31,6 +34,8 @@ import de.web.tools.jagger.console.TerminalController;
  *  the result.
  */
 class CLI {
+    private static Log log = LogFactory.getLog(CLI.class)
+
     /* Timeout for thread joining on shutdown. */
     static final JOIN_TIMEOUT = 10000
 
@@ -162,6 +167,9 @@ class CLI {
      *  @return exit code
      */
     private mainloop(cli, options) {
+        // log proper startup
+        log.info("Jagger startup initiated by ${System.getProperty('user.name')}")
+
         // load merged config
         def configError = setConfig(cli, options)
         if (configError != null) {
@@ -230,6 +238,9 @@ class CLI {
         // wait for controller to shut down; if timeout strikes, we're good
         // since controller is a daemon.
         terminal.join(JOIN_TIMEOUT)
+
+        // log proper shutdown
+        log.info("Jagger shutdown initiated by ${System.getProperty('user.name')}")
 
         return 0
     }

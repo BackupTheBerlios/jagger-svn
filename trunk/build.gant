@@ -284,6 +284,7 @@ task(build: 'Create a build of the project') {
     // copy user-modifiable configuration files
     Ant.copy(todir: build_conf_dir) {
         fileset(dir: conf_dir, includes: 'user*')
+        fileset(dir: conf_dir, includes: '*.properties')
         filterset(refid: 'build-filter')
     }
 
