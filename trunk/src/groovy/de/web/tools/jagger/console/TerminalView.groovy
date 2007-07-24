@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: TerminalView.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console;
@@ -78,8 +78,8 @@ class TerminalView {
     ]
 
     // Constants
-    final ROWS = 24
-    final COLS = 79
+    final DEFAULT_ROWS = 24
+    final DEFAULT_COLS = 79
     final SYS_ROWS = 2
     final BEEP_WAIT = 100
     final String EDGE_LEFT = "[ "
@@ -96,6 +96,26 @@ class TerminalView {
     private Integer row_offset = 0
     private Boolean beepOnUpdate = false
 
+    // current window size
+    def ROWS = DEFAULT_ROWS
+    def COLS = DEFAULT_COLS
+
+
+    /** get current window size from environent, if possible
+     */
+    private void getWindowSize() {
+        def rows = System.getProperty('terminal.rows')
+        def cols = System.getProperty('terminal.cols')
+
+        if (!''.equals(rows)) {
+            try { ROWS = new Integer(rows) - 1 }
+            catch (NumberFormatException ex) {}
+        }
+        if (!''.equals(cols)) {
+            try { COLS = new Integer(cols) - 1 }
+            catch (NumberFormatException ex) {}
+        }
+    }
 
     /** force row_offset into limits, return true if correction was necessary
      */
@@ -154,6 +174,7 @@ class TerminalView {
     void init() {
         print Ansi.CLRSCR
         print Ansi.HOME
+        getWindowSize()
     }
 
     void beep() {
@@ -167,6 +188,7 @@ class TerminalView {
         for (i in 1..(ROWS-SYS_ROWS)) {
             println ' ' * COLS
         }
+        getWindowSize()
     }
 
     private List getScreen() {

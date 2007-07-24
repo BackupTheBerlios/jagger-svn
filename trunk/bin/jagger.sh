@@ -48,6 +48,8 @@ JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote"
 JAVA_OPTS="$JAVA_OPTS -Dproject.name=@project.name@"
 JAVA_OPTS="$JAVA_OPTS -Dproject.version=@project.version@"
 JAVA_OPTS="$JAVA_OPTS -Dproject.home=$SCRIPTROOT"
+JAVA_OPTS="$JAVA_OPTS -Dterminal.rows=$(tput lines)"
+JAVA_OPTS="$JAVA_OPTS -Dterminal.cols=$(tput cols)"
 
 if $RAW; then
     SAVED_MODES=$(stty -g)
