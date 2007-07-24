@@ -178,20 +178,23 @@ class TerminalController extends Thread {
         errorMessage = []
         currentHostIdx = hostidx
 
-        def serverUrl = "service:jmx:rmi:///jndi/rmi://${currentHost}/jmxrmi"
-        def new_agent = new JMXAgentFacade(url: serverUrl, username: config.props.u, password: config.props.w)
+        def serviceUrl = currentHost
+        if (!currentHost.startsWith('service:jmx:')) {
+            serviceUrl = "service:jmx:rmi:///jndi/rmi://${currentHost}/jmxrmi"
+        }
+        def new_agent = new JMXAgentFacade(url: serviceUrl, username: config.props.u, password: config.props.w)
         def errorString = null
 
         try {
             new_agent.openConnection()
         } catch (SecurityException ex) {
-            log.error("You're not authorized for ${serverUrl}", ex)
+            log.error("You're not authorized for ${serviceUrl}", ex)
             if (DEBUG) { killed = true; throw ex }
             errorString = ex as String
         } catch (ThreadDeath td) {
             throw td
         } catch (Throwable ex) { // catch, log and show
-            log.error("Can't connect to ${serverUrl}", ex)
+            log.error("Can't connect to ${serviceUrl}", ex)
             if (DEBUG) { killed = true; throw ex }
             errorString = ex as String
         }
