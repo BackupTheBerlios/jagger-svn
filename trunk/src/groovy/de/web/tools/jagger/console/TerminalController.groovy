@@ -110,10 +110,12 @@ class TerminalController extends Thread {
                 // jmx_error
                 log.error("JMX connection error to ${currentHost}", ex)
                 if (DEBUG) { killed = true; throw ex }
-            } catch (Throwable t) { // catch, log and throw
-                log.fatal("Unexpected exception, shutting down", t)
+            } catch (ThreadDeath td) {
+                throw td
+            } catch (Throwable ex) { // catch, log and throw
+                log.fatal("Unexpected exception, shutting down", ex)
                 killed = true
-                throw t
+                throw ex
             }
 
             if (jmx_error) {
@@ -178,30 +180,32 @@ class TerminalController extends Thread {
 
         def serverUrl = "service:jmx:rmi:///jndi/rmi://${currentHost}/jmxrmi"
         def new_agent = new JMXAgentFacade(url: serverUrl, username: config.props.u, password: config.props.w)
+        def errorString = null
 
         try {
             new_agent.openConnection()
         } catch (SecurityException ex) {
-            new_agent = null
             log.error("You're not authorized for ${serverUrl}", ex)
             if (DEBUG) { killed = true; throw ex }
-            errorMessage = ex as String
-        } catch (IOException ex) {
-            new_agent = null
+            errorString = ex as String
+        } catch (ThreadDeath td) {
+            throw td
+        } catch (Throwable ex) { // catch, log and show
             log.error("Can't connect to ${serverUrl}", ex)
             if (DEBUG) { killed = true; throw ex }
-            errorMessage = ex as String
+            errorString = ex as String
         }
 
-        if (new_agent) {
+        if (errorString != null) {
+            new_agent = null
+            errorMessage = errorString.split(': ')
+            view.clear()
+        } else {
             jvm = new JvmFacade(agent: new_agent)
             tomcat = new TomcatFacade(agent: new_agent)
 
             // activate the new agent
             agent = new_agent
-        } else {
-            errorMessage = errorMessage.tokenize(':')
-            view.clear()
         }
     }
 
