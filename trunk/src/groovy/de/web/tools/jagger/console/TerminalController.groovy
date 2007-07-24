@@ -19,6 +19,9 @@ package de.web.tools.jagger.console;
 
 import javax.management.JMException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.jmx.*;
@@ -28,27 +31,17 @@ import de.web.tools.jagger.console.panels.AboutPanel;
 
 
 class TerminalController extends Thread {
+    private static Log log = LogFactory.getLog(TerminalController.class)
+
     static final Integer INDENT = 4
     static final FROZEN_TAG = ' [FROZEN]'
 
-    Boolean DEBUG = true
+    Boolean DEBUG = false
     Integer COLS
     Integer ROWS
 
+    // panels are loaded from userContext.xml
     def panels = [:]
-/*
-    final panels = [
-        ('!'): AboutPanel,
-        c: ConnectorPanel,
-        d: DatabasePanel,
-        e: EnvironmentPanel,
-        h: HelpPanel,
-        j: JvmPanel,
-        m: MemoryPanel,
-        v: VersionPanel,
-        w: WebappPanel,
-    ]
-*/
 
     private view
     private agent
@@ -107,14 +100,18 @@ class TerminalController extends Thread {
                 jmx_error = false
             } catch (IOException ex) {
                 // jmx_error
+                log.error("JMX I/O error while talking to ${currentHost}", ex)
                 if (DEBUG) { killed = true; throw ex }
             } catch (JMException ex) {
                 // jmx_error
+                log.error("JMX error while talking to ${currentHost}", ex)
                 if (DEBUG) { killed = true; throw ex }
             } catch (ConnectException ex) {
                 // jmx_error
+                log.error("JMX connection error to ${currentHost}", ex)
                 if (DEBUG) { killed = true; throw ex }
-            } catch (Throwable t) { // catch-and-throw
+            } catch (Throwable t) { // catch, log and throw
+                log.fatal("Unexpected exception, shutting down", t)
                 killed = true
                 throw t
             }
@@ -165,7 +162,7 @@ class TerminalController extends Thread {
                 // Sleep till next refresh
                 Thread.sleep(frozen ? Long.MAX_VALUE : 1000)
             } catch (InterruptedException e) {
-                // Ignore, we're just asked to refresh immediately
+                // Ignore, we were just asked to refresh immediately
             }
         }
     }
@@ -184,12 +181,16 @@ class TerminalController extends Thread {
 
         try {
             new_agent.openConnection()
-        } catch (IOException ex) {
-            if (DEBUG) { killed = true; throw ex }
-
-            errorMessage = (ex as String).tokenize(':')
+        } catch (SecurityException ex) {
             new_agent = null
-            view.clear()
+            log.error("You're not authorized for ${serverUrl}", ex)
+            if (DEBUG) { killed = true; throw ex }
+            errorMessage = ex as String
+        } catch (IOException ex) {
+            new_agent = null
+            log.error("Can't connect to ${serverUrl}", ex)
+            if (DEBUG) { killed = true; throw ex }
+            errorMessage = ex as String
         }
 
         if (new_agent) {
@@ -198,6 +199,9 @@ class TerminalController extends Thread {
 
             // activate the new agent
             agent = new_agent
+        } else {
+            errorMessage = errorMessage.tokenize(':')
+            view.clear()
         }
     }
 
