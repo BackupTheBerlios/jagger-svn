@@ -18,6 +18,10 @@
 package de.web.tools.jagger.util;
 
 
+/**
+ *  License texts and other project meta-information.
+ *  This class consists entirely of static final strings.
+ */
 class License {
     static final APPNAME = System.getProperty('program.name')
     static final APPVERSION = System.getProperty('project.version')

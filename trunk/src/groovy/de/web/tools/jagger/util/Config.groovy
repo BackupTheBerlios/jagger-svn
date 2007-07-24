@@ -20,16 +20,27 @@ package de.web.tools.jagger.util;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 
+/**
+ *  Configuration parsing.
+ */
 class Config {
+    // name of application context file
     final String APPLICATION_CONTEXT = 'applicationContext.xml'
+
+    // name of user-defined context file
     final String USER_CONTEXT = 'userContext.xml'
 
-    /// the spring context
+    // the spring context
     private volatile springContext = null
 
-    /// configuration properties (jagger.properties / cmd line)
+    // configuration properties (jagger.properties / cmd line)
     def props = [:]
 
+    /**
+     *  Get the spring context, and load it from the classpath on first call.
+     *
+     *  @return Spring context object.
+     */
     def getContext() {
         if (springContext == null) {
             synchronized (this) {
