@@ -30,6 +30,16 @@ import de.web.tools.jagger.console.panels.HelpPanel;
 import de.web.tools.jagger.console.panels.AboutPanel;
 
 
+/**
+ *  Mediator for the interaction between user (keyboard), JMX facades,
+ *  data views and the screen (terminal display).
+ *  <p>
+ *  The controller's mainloop runs in its own daemon thread, which
+ *  usually sleeps and is only woken up if state changes 
+ *  induced by method calls of its interface make a display
+ *  update necessary.
+ * 
+ */
 class TerminalController extends Thread {
     private static Log log = LogFactory.getLog(TerminalController.class)
 

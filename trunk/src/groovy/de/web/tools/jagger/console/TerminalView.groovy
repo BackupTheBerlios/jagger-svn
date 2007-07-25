@@ -17,9 +17,13 @@
 
 package de.web.tools.jagger.console;
 
-import java.text.SimpleDateFormat
+import java.text.SimpleDateFormat;
 
 
+/**
+ *  Visualization of panel content on an ANSI terminal, including paging,
+ *  visual beep and other supporting features.
+ */
 class TerminalView {
     // ANSI sequences
     final Ansi = [
@@ -77,31 +81,54 @@ class TerminalView {
         ALERT           : '\033[1;3;33;41m',
     ]
 
-    // Constants
+    // default terminal size, if no better value available
     final DEFAULT_ROWS = 24
+
+    // default terminal size, if no better value available
     final DEFAULT_COLS = 79
+
+    // lines used by the terminal view itself (title, status)
     final SYS_ROWS = 2
+
+    // wait time for visial beep [msec]
     final BEEP_WAIT = 100
+
+    // left edge of title / status inserts
     final String EDGE_LEFT = "[ "
+
+    // right edge of title / status inserts
     final String EDGE_RIGHT = " ]"
+
+    // format of time display in title
     final DATEFMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 
-    // Properties
+    // the title of the window
     String title = ""
+
+    // text for status line insert
     String status = ""
+
+    // the name of the currently display panel
     String panel = ""
 
-    // Status
+    // list of content lines
     private content = []
+
+    // zero-based offset into content, first line to be displayed
     private Integer row_offset = 0
+
+    // if true, do a visual beep on the next update, then reset to false
     private Boolean beepOnUpdate = false
 
-    // current window size
+    // current terminal size (number of lines)
     def ROWS = DEFAULT_ROWS
+
+    // current terminal size (number of columns)
     def COLS = DEFAULT_COLS
 
 
-    /** get current window size from environent, if possible
+    /**
+     *  Gets current window size from environent, if possible.
      */
     private void getWindowSize() {
         def rows = System.getProperty('terminal.rows')
@@ -117,7 +144,12 @@ class TerminalView {
         }
     }
 
-    /** force row_offset into limits, return true if correction was necessary
+    /**
+     *  Forces "row_offset" into allowed limits. Must be called after
+     *  every unchecked manipulation of "row_offset".
+     *
+     *  @return true if correction was necessary.
+     *  @todo Could be enforced by refactoring to a setter.
      */
     private Boolean checkOffset() {
         def oldval = row_offset
@@ -129,58 +161,88 @@ class TerminalView {
         return oldval != row_offset
     }
 
-    /** make line exactly COLS characters long, taking invisible
-        ANSI sequences into account.
+    /**
+     *  Makes "line" exactly COLS glyphs long, taking invisible
+     *  ANSI sequences into account. This is important so that
+     *  neither other lines get overwritten nor older content remains
+     *  on the console.
+     *
+     *  @param line The line to be canonicalized.
+     *  @return Line limited in visual length.
      */
     private String padOrChop(String line) {
-        if (line.length() <= COLS) {
-            return ' ' * (COLS+1) + '\r' + line
-        }
+        def result = null
 
-        def idx = 0
-        def pos = 0
-        Boolean ansi = false
-        for (ch in line) {
-            switch (ch as Character) {
-                case '\033' as Character:
-                    ansi = true
-                    break
-                    
-                case {'a' <= it && it <= 'z' || 'A' <= it && it <= 'Z'}:
-                    if (ansi) {
-                        ansi = false
+        // skip detailed checks if line obviously shorter than COLS
+        if (line.length() > COLS) {
+            // string is longer than COLS, could still be visually shorter
+            def idx = 0
+            def pos = 0
+            Boolean ansi = false
+
+            // count visible glyphs (in pos), ignoring ANSI sequences, and
+            // bookkeep a tied offset into the line (in idx)
+            for (ch in line) {
+                switch (ch as Character) {
+                    case '\033' as Character:
+                        // within ANSI sequence
+                        ansi = true
                         break
-                    }
-                    // fallthrough
+                    
+                    case {'a' <= it && it <= 'z' || 'A' <= it && it <= 'Z'}:
+                        // any letter ends the ANSI sequence
+                        if (ansi) {
+                            ansi = false
+                            break
+                        }
+                        // fallthrough
 
-                default:
-                    if (!ansi) pos += 1
-                    break
+                    default:
+                        if (!ansi) pos += 1
+                        break
+                }
+                idx += 1
+                //println "$pos $idx $ansi ${(ch as Character)}"
+
+                // break out if reached end of terminal line
+                if (pos >= COLS) break
             }
-            idx += 1
-            //println "$pos $idx $ansi ${(ch as Character)}"
-            if (pos >= COLS) break
-        }
-        //println "$pos $idx ${line.length()} $ansi"
+            //println "$pos $idx ${line.length()} $ansi"
 
-        // line longer than COLS only due to ANSI seqs
-        if (pos < COLS || idx == line.length()) {
-            return ' ' * COLS + '\r' + line
+            // line visually longer than COLS?
+            if (pos >= COLS && idx > line.length()) {
+                result = line[0..<idx] + Ansi.DARK_GRAY + '>' + Ansi.NORMAL
+            }
         }
-
-        return line[0..<idx] + Ansi.DARK_GRAY + '>' + Ansi.NORMAL
+        
+        if (result == null) {
+            // pad with erasing whitespace
+            // XXX could be relaced by "delete to EOL" ANSI sequence?!
+            result = ' ' * (COLS+1) + '\r' + line
+        }
+        
+        return result
     }
 
+    /**
+     *  Initializes and fully clears the terminal.
+     */
     void init() {
         print Ansi.CLRSCR
         print Ansi.HOME
         getWindowSize()
     }
 
+    /**
+     *  Visually beeps terminal on next update.
+     */
     void beep() {
         beepOnUpdate = true
     }
     
+    /**
+     *  Clears the terminal content (keeps title and status).
+     */
     void clear() {
         row_offset = 0
 
@@ -191,27 +253,52 @@ class TerminalView {
         getWindowSize()
     }
 
+    /**
+     *  Takes the content and prepares a list of lines ready to be
+     *  printed to the terminal in order to replace the repviously
+     *  displayed content with no or minimal flickering.
+     *
+     *  @return List of lines (without EOLs).
+     */
     private List getScreen() {
+        /*  Helper to stamp little sections of info into the header
+         *  and footer lines.
+         *
+         *  @param buf Current line.
+         *  @param pos Position of insert, can be negative for right-side offsets.
+         *  @param txt Text to insert.
+         *  @return Decorated line.
+         */
         def stamp = { buf, pos, txt ->
+            // length of characters we add for visual purposes
             def extra_chars = EDGE_LEFT.length() + EDGE_RIGHT.length()
-            if (pos < 0)
+
+            if (pos < 0) {
+                // right-sided offsets are relative to the right side (END)
+                // of the insert, fix into a relative string position
+                // of the START of the insert
                 pos -= txt.length() + extra_chars - 1
+            }
+            
+            // replace relevant portion of "buf" by text insert
             buf[pos..(pos + txt.length() + extra_chars - 1)] = "$EDGE_LEFT$txt$EDGE_RIGHT"
         }
 
         def screen = []
         checkOffset()
 
-        // header
+        // build header
         def titlebar = new StringBuffer('=' * COLS)
         def now = DATEFMT.format(new Date())
         stamp(titlebar, -2, "'?' = help | $now")
         stamp(titlebar, 1, "$panel - $title")
         screen << Ansi.WINDOW + titlebar + Ansi.NORMAL
 
-        // content
+        // build content
         for (row in 0..<(ROWS - SYS_ROWS)) {
             def line = ''
+
+            // if not beyond the end of content...
             if (row_offset + row < content.size()) {
                 line = content[row_offset + row]
             }
@@ -219,11 +306,12 @@ class TerminalView {
             screen << padOrChop(line)
         }
         
-        // footer
+        // build footer
         def statusbar = new StringBuffer('=' * COLS)
         stamp(statusbar, 1, status)
 
         if (content.size() > ROWS - SYS_ROWS) {
+            // add scroll info to footer, when we have something to scroll
             def end = row_offset + ROWS - SYS_ROWS
             def up = ''
             def down = ''
@@ -234,48 +322,81 @@ class TerminalView {
         }
 
         screen << Ansi.WINDOW + statusbar + Ansi.NORMAL
+
+        // return the assembled terminal screen
         return screen
     }
     
+    /**
+     *  Updates the terminal view with new content.
+     *
+     *  @param new_content List of lines to be displayed.
+     */
     void update(new_content) {
+        // save content for later (scrolling), and prepare for output
         content = new_content
         def screen = getScreen()
 
+        // has someone requested a beep?
         if (beepOnUpdate) {
+            // beep only once per update event
             beepOnUpdate = false
+
+            // display INVERSE content for some short time, including
+            // an audible beep
             print '\007' + Ansi.HOME + Ansi.INVERSE
             print screen.join('\n' + Ansi.INVERSE)
             try {
                 Thread.sleep(BEEP_WAIT)
             } catch (InterruptedException e) {
-                // Ignore
+                // Ignore (new content was signalled)
             }
         }
 
+        // plain display of new content, overwriting the old one
         print Ansi.HOME
         print screen.join('\n')
     }
 
+    /**
+     *  Closes terminal, leaving it blank.
+     */
     void close() {
         print Ansi.CLRSCR
         print Ansi.HOME
     }
 
+    /**
+     *  Scrolls content up a page (previous page with one line overlap).
+     *  Does NOT update the screen.
+     */
     void pageUp() {
         row_offset -= ROWS - SYS_ROWS - 1
         if (checkOffset()) beep()
     }
 
+    /**
+     *  Scrolls content down a page (next page with one line overlap).
+     *  Does NOT update the screen.
+     */
     void pageDown() {
         row_offset += ROWS - SYS_ROWS - 1
         if (checkOffset()) beep()
     }
 
+    /**
+     *  Scrolls content up a line (previous line).
+     *  Does NOT update the screen.
+     */
     void lineUp() {
         row_offset--
         if (checkOffset()) beep()
     }
 
+    /**
+     *  Scrolls content down a line (next line).
+     *  Does NOT update the screen.
+     */
     void lineDown() {
         row_offset++
         if (checkOffset()) beep()
