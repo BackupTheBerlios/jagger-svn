@@ -31,7 +31,7 @@ class Config {
     final String USER_CONTEXT = 'userContext.xml'
 
     // the spring context
-    private volatile springContext = null
+    private springContext = null
 
     // configuration properties (jagger.properties / cmd line)
     def props = [:]
@@ -41,15 +41,11 @@ class Config {
      *
      *  @return Spring context object.
      */
-    def getContext() {
+    synchronized getContext() {
         if (springContext == null) {
-            synchronized (this) {
-                if (springContext == null) {
-                    springContext = new ClassPathXmlApplicationContext(
-                        [APPLICATION_CONTEXT, USER_CONTEXT] as String[]
-                    )
-                }
-            }
+            springContext = new ClassPathXmlApplicationContext(
+                [APPLICATION_CONTEXT, USER_CONTEXT] as String[]
+            )
         }
         return springContext
     }

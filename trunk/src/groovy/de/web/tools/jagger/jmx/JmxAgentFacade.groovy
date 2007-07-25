@@ -30,7 +30,7 @@ import javax.management.remote.JMXServiceURL;
  */
 class JMXAgentFacade {
     // connection to remote agent
-    private volatile jmxConnection = null;
+    private jmxConnection = null;
 
     // JMX service url
     def url = null
@@ -47,25 +47,21 @@ class JMXAgentFacade {
      *
      *  @return Opened connection.
      */
-    private openConnection() {
+    synchronized private openConnection() {
         // create connection on demand, in a fast and thread-safe way
         if (jmxConnection == null) {
-            synchronized (this) {
-                if (jmxConnection == null) {
-                    def jmxEnv = null
-                    if (password != null) {
-                        // this is the form Tomcat expects credentials, other
-                        // containers might differ!
-                        jmxEnv = [(JMXConnector.CREDENTIALS):
-                            [this.username, this.password] as String[]
-                        ]
-                    }
-                    
-                    // create connection
-                    def connector = JMXConnectorFactory.connect(new JMXServiceURL(this.url), jmxEnv)
-                    jmxConnection = connector.mBeanServerConnection
-                }
+            def jmxEnv = null
+            if (password != null) {
+                // this is the form Tomcat expects credentials, other
+                // containers might differ!
+                jmxEnv = [(JMXConnector.CREDENTIALS):
+                    [this.username, this.password] as String[]
+                ]
             }
+            
+            // create connection
+            def connector = JMXConnectorFactory.connect(new JMXServiceURL(this.url), jmxEnv)
+            jmxConnection = connector.mBeanServerConnection
         }
 
         return jmxConnection
