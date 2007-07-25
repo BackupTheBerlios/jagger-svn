@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: TomcatFacade.groovy 122570 2007-07-06 07:58:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.jmx;
@@ -20,21 +20,44 @@ package de.web.tools.jagger.jmx;
 import javax.management.AttributeNotFoundException
 
 
+/**
+ *  Facade to Tomcat 5.5 container including Java Service Wrapper.
+ *  This hides some of the more gory details of JMX data structures and
+ *  caches data where possible.
+ */
 class TomcatFacade {
+    // Java Service Wrapper
     private jswBean = null
+
+    // Catalina
     private serverBean = null
+
+    // Connectors (map sorted by name)
     private connectors = null
+
+    // JDBC datasources (map sorted by name)
     private datasources = null
 
+    // reference to JMX agent proxy
     def agent = null
 
+
+    /**
+     *  Changes the JMX agent to a new one, effectively changing the
+     *  JMX connection. This reloads several cached entities, that only
+     *  change when the underlying JVM is a different one.
+     *
+     *  @param agent The new JMX agent.
+     */
     void setAgent(agent) {
+        // remember connection
         this.agent = agent
 
         // get beans for this agent
         jswBean = agent.getBean('JavaServiceWrapper:service=WrapperManager')
         serverBean = agent.getBean('Catalina:type=Server')
 
+        // query the connectors
         connectors = new TreeMap()
         agent.queryBeans('Catalina:type=ThreadPool,*') { name, bean ->
             String key = name.getKeyProperty('name')
@@ -45,6 +68,7 @@ class TomcatFacade {
             )
         }
         
+        // query the SQL datasources
         datasources = new TreeMap()
         agent.queryBeans('Catalina:type=DataSource,class=javax.sql.DataSource,*') { name, bean ->
             String key = name.getKeyProperty('name')
@@ -52,9 +76,27 @@ class TomcatFacade {
         }
     }
 
+    /**
+     *  Return connector info.
+     *
+     *  @return Sorted map of connector info, each consisting of
+     *          a "threads" and a "requests" MBean.
+     */
     def getConnectors() { connectors }
+
+    /**
+     *  Return datasource info.
+     *
+     *  @return Sorted map of datasource MBeans.
+     */
     def getDataSources() { datasources }
 
+    /**
+     *  Return webapplication info.
+     *
+     *  @return Sorted map of contexts, each consisting of
+     *          a "session" and a "webapp" MBean.
+     */
     def getContexts() {
         def contexts = new TreeMap()
         agent.queryBeans('Catalina:type=Manager,*') { name, bean ->
@@ -70,16 +112,30 @@ class TomcatFacade {
         return contexts
     }
 
+    /**
+     *  Return the instance number of the JVM.
+     *
+     *  @return Counter which identifies the instance the JSW has created
+     *          during his lifetime (initially 1).
+     */
     def getJVMId() { jswBean.JVMId }
 
+    /**
+     *  Return version information.
+     *
+     *  @return Map with "jsw" and "tomcat" versions.
+     */
     def getVersions() {
         def result = [
             jsw: jswBean.Version,
             tomcat: 'N/A',
         ]
+
+        // try to get Tomcat's version, older ones don't have this
         try {
             result.tomcat = serverBean.serverInfo
         } catch (AttributeNotFoundException) {}
+
         return result
     }
 }

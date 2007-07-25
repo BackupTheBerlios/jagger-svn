@@ -17,19 +17,41 @@
 
 package de.web.tools.jagger.jmx;
 
+
+/**
+ *  Facade to remote JVM.
+ *  This hides some of the more gory details of JMX data structures and
+ *  caches data where possible.
+ */
 class JvmFacade {
+    // on-demand cache for certain immutable MBeans, see cachable() helper
     private cache = [:]
+
+    // remote beans
     private runtimeBean = null
     private threadingBean = null
     private memoryBean = null
     private classLoaderBean = null
     private osBean = null
+
+    // bean pools sorted by name
     private poolBeans = null
     private gcBeans = null
-    private remote_pathsep = null
 
+    // used to split remote classpaths
+    private remotePathsep = null
+
+    // reference to JMX agent proxy
     def agent = null
 
+
+    /**
+     *  Changes the JMX agent to a new one, effectively changing the
+     *  JMX connection. This reloads several cached entities, that only
+     *  change when the underlying JVM is a different one.
+     *
+     *  @param agent The new JMX agent.
+     */
     void setAgent(agent) {
         this.agent = agent
 
@@ -43,6 +65,7 @@ class JvmFacade {
         classLoaderBean = agent.getBean('java.lang:type=ClassLoading')
         osBean = agent.getBean('java.lang:type=OperatingSystem')
 
+        // query memory pools
         poolBeans = new TreeMap()
         agent.queryBeans('java.lang:type=MemoryPool,*') { name, bean ->
             poolBeans[bean.Name] = bean
@@ -50,14 +73,25 @@ class JvmFacade {
             //println bean.dump()
         }
 
+        // query GC beans
         gcBeans = new TreeMap()
         agent.queryBeans('java.lang:type=GarbageCollector,*') { name, bean ->
             gcBeans[bean.Name] = bean
         }
 
-        remote_pathsep = runtimeBean.SystemProperties[['path.separator'] as Object[]].contents.value
+        // get remote pathsep from remote system properties
+        remotePathsep = runtimeBean.SystemProperties[['path.separator'] as Object[]].contents.value
     }
 
+    /**
+     *  Helper to remember cachable results. Checks the cache for an entry
+     *  for "key" and if none is found, call the passed in closure and stores
+     *  its return value in the cache for further calls.
+     *
+     *  @param key Key of the cache entry.
+     *  @param generator Closure to generate the value if needed.
+     *  @return The value for "key".
+     */
     private cachable(key, generator) {
         if (!cache.containsKey(key)) {
             cache[key] = generator()
@@ -65,28 +99,60 @@ class JvmFacade {
         return cache[key]
     }
 
-    // JVM uptime in seconds with milliseconds
+    /**
+     *  Returns the JVM uptime.
+     *
+     *  @return Seconds, with milliseconds in the fractional part.
+     */
     def getUptime() { runtimeBean.Uptime / 1000.0 }
 
-    // JVM start time as UNIX timestamp in milliseconds
+    /**
+     *  Returns the JVM startup time.
+     *
+     *  @return UNIX timestamp, but in milliseconds.
+     */
     def getStartTime() { runtimeBean.StartTime }
 
-    // Peak number of threads
+    /**
+     *  Returns the peak number of threads.
+     *
+     *  @return Thread count.
+     */
     def getPeakThreadCount() { threadingBean.PeakThreadCount }
  
-    // Current number of threads
+    /**
+     *  Returns the current number of threads.
+     *
+     *  @return Thread count.
+     */
     def getThreadCount() { threadingBean.ThreadCount }
 
-    // Used CPU time in seconds with nanoseconds
+    /**
+     *  Returns the CPU time used by this JVM in its lifetime.
+     *
+     *  @return Time in seconds, with nanoseconds in the fractional part.
+     */
     def getCPUTime() { osBean.ProcessCpuTime / 1000000000.0 }
 
-    // Open handles
+    /**
+     *  Returns the open file handles.
+     *
+     *  @return Handle count.
+     */
     def getOpenHandles() { osBean.OpenFileDescriptorCount }
 
-    // Max. handles
+    /**
+     *  Returns the maximum open file handles.
+     *
+     *  @return Handle count.
+     */
     def getMaxHandles() { osBean.MaxFileDescriptorCount }
 
-    // Classloader counts
+    /**
+     *  Returns the classloader counts.
+     *
+     *  @return Map of class counts: loaded, unloaded, total.
+     */
     def getClassLoader() {
         [
             loaded: classLoaderBean.LoadedClassCount,
@@ -95,55 +161,103 @@ class JvmFacade {
         ]
     }
 
-    // Heap memory (Used, Committed, Max, Initial)
+    /**
+     *  Returns the heap memory info.
+     *
+     *  @return JMX data (Used, Committed, Max, Initial).
+     */
     def getHeap() {
         memoryBean.HeapMemoryUsage.contents
     }
 
-    // Native memory (Used, Committed, Max, Initial)
+    /**
+     *  Returns the native (non-heap) memory info.
+     *
+     *  @return JMX data (Used, Committed, Max, Initial).
+     */
     def getNonHeap() {
         memoryBean.NonHeapMemoryUsage.contents
     }
 
-    // # of objects in finalization queue
+    /**
+     *  Returns the number of objects in finalization queue.
+     *
+     *  @return Object count.
+     */
     def getZombieCount() {
         memoryBean.ObjectPendingFinalizationCount
     }
 
-    // Memory pools
+    /**
+     *  Returns the memory pools.
+     *
+     *  @return Memory pool beans sorted by name.
+     */
     def getPools() { poolBeans }
 
-    // Garbage collectors
+    /**
+     *  Returns the garbage collectors.
+     *
+     *  @return Garbage collector beans sorted by name.
+     */
     def getGC() { gcBeans }
 
-    // JVM ID (PID@HOST)
+    /**
+     *  Returns the ID indentifying the remote JVM.
+     *
+     *  @return JVM ID (PID@HOST).
+     */
     def getID() { runtimeBean.Name }
 
-    // JVM paths
+    /**
+     *  Returns the remote JVM boot classpath.
+     *
+     *  @return Path list.
+     */
     List getBootClassPath() {
         cachable('BootClassPath') {
-            runtimeBean.BootClassPath.split(remote_pathsep)
-        }
-    }
-    List getClassPath() {
-        cachable('ClassPath') {
-            runtimeBean.ClassPath.split(remote_pathsep)
-        }
-    }
-    List getLibraryPath() {
-        cachable('LibraryPath') {
-            runtimeBean.LibraryPath.split(remote_pathsep)
+            runtimeBean.BootClassPath.split(remotePathsep)
         }
     }
 
-    // JVM command line args
+    /**
+     *  Returns the remote JVM classpath.
+     *
+     *  @return Path list.
+     */
+    List getClassPath() {
+        cachable('ClassPath') {
+            runtimeBean.ClassPath.split(remotePathsep)
+        }
+    }
+
+    /**
+     *  Returns the remote JVM library path.
+     *
+     *  @return Path list.
+     */
+    List getLibraryPath() {
+        cachable('LibraryPath') {
+            runtimeBean.LibraryPath.split(remotePathsep)
+        }
+    }
+
+    /**
+     *  Returns the remote JVM command line arguments.
+     *
+     *  @return Argument list.
+     */
     List getInputArguments() {
         cachable('InputArguments') {
             runtimeBean.InputArguments
         }
     }
 
-    // JVM System Properties
+    /**
+     *  Returns the remote JVM system properties.
+     *
+     *  @return Property map sorted by name.
+     */
     def getSystemProperties() {
         cachable('SystemProperties') {
             def sysProps = new TreeMap()
@@ -154,7 +268,11 @@ class JvmFacade {
         }
     }
 
-    // get runtime versions
+    /**
+     *  Returns the remote system runtime versions.
+     *
+     *  @return Version map: os, jvm.
+     */
     def getVersions() {
         cachable('Versions') {
             [
@@ -164,7 +282,16 @@ class JvmFacade {
         }
     }
 
-    // get component version info (using WEB.DE standards)
+    /**
+     *  Returns the remote component version info (using WEB.DE standards).
+     *  <p>
+     *  Each component is described by a map with at least the three fields
+     *  "name", "type" and "version".
+     *  See "src/conf/applicationContext.xml" for an example on how to add
+     *  such Mbeans and further details on their structure.
+     *
+     *  @return List of component version information.
+     */
     def getComponents() {
         def result = []
         agent.queryBeans('de.web.management:type=VersionInfo,*') { name, bean ->
@@ -172,6 +299,5 @@ class JvmFacade {
         }
         return result
     }
-
 }
 

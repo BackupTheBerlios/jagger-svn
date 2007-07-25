@@ -12,54 +12,102 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: JmxAgentFacade.groovy 122570 2007-07-06 07:58:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.jmx;
 
-// Imports
-import javax.management.ObjectName
-import javax.management.MBeanServer
-import javax.management.remote.JMXConnectorFactory
-import javax.management.remote.JMXConnector
-import javax.management.remote.JMXServiceURL
+import javax.management.ObjectName;
+import javax.management.MBeanServer;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXServiceURL;
 
 
+/**
+ *  Facade and proxy to a remote JMX agent. Handles credentials and provides
+ *  some groovyfied helpers to access its MBeans.
+ */
 class JMXAgentFacade {
-    private jmxConnection = null;
+    // connection to remote agent
+    private volatile jmxConnection = null;
 
-    def url = null;
-    def username = null;
-    def password = null;
+    // JMX service url
+    def url = null
 
-    // Open connection to remote agent.
+    // credentials: username
+    def username = null
+
+    // credentials: password
+    def password = null
+
+
+    /**
+     *  Open connection to remote agent.
+     *
+     *  @return Opened connection.
+     */
     private openConnection() {
-        if (this.jmxConnection == null) {
-            def jmxEnv = null
-            if (password != null)
-                jmxEnv = [(JMXConnector.CREDENTIALS): [this.username, this.password] as String[]]
-            def connector = JMXConnectorFactory.connect(new JMXServiceURL(this.url), jmxEnv)
-            this.jmxConnection = connector.mBeanServerConnection
+        // create connection on demand, in a fast and thread-safe way
+        if (jmxConnection == null) {
+            synchronized (this) {
+                if (jmxConnection == null) {
+                    def jmxEnv = null
+                    if (password != null) {
+                        // this is the form Tomcat expects credentials, other
+                        // containers might differ!
+                        jmxEnv = [(JMXConnector.CREDENTIALS):
+                            [this.username, this.password] as String[]
+                        ]
+                    }
+                    
+                    // create connection
+                    def connector = JMXConnectorFactory.connect(new JMXServiceURL(this.url), jmxEnv)
+                    jmxConnection = connector.mBeanServerConnection
+                }
+            }
         }
 
-        return this.jmxConnection
+        return jmxConnection
     }
 
-    /** Get a single MBean and return it as a GroovyMBean.
+    /**
+     *  Force a bean description to be an ObjectName
+     *
+     *  @param objname Either a String or ObjectName describing a MBean.
+     *  @return ObjectName for the given name.
      */
-    def getBean(objname) {
-        def beanName = objname
-        if (!ObjectName.isInstance(beanName))
-            beanName = new ObjectName(beanName)
+    ObjectName makeObjectName(objname) {
+        // easy way out?
+        if (ObjectName.isInstance(objname)) {
+            return objname
+        }
 
-        return new GroovyMBean(openConnection(), beanName)
+        // treat everything not already an ObjectName as a String
+        // and create an ObjectName from it
+        return new ObjectName(objname)
     }
 
-    /** Query and iterate over a set of MBeans and call "handler"
-        with the bean's name and a GroovyMBean already created.
+    /**
+     *  Get a single MBean and return it as a GroovyMBean.
+     *
+     *  @param objname Either a String or ObjectName describing the bean.
+     *  @return GroovyMBean for the given name.
      */
-    def queryBeans(query, handler) {
-        def queryName = new ObjectName(query)
+    GroovyMBean getBean(objname) {
+        // create and return proxy
+        return new GroovyMBean(openConnection(), makeObjectName(objname))
+    }
+
+    /**
+     *  Query and iterate over a set of MBeans and call "handler"
+     *  with the bean's name and a GroovyMBean already created.
+     *
+     *  @param query Either a String or ObjectName containing the query pattern.
+     *  @param handler A closure that gets called for every bean found.
+     */
+    void queryBeans(query, handler) {
+        def queryName = makeObjectName(query)
 
         openConnection().queryMBeans(queryName, null).each { mbean ->
             //println mbean.inspect() + mbean.dump()
@@ -68,7 +116,5 @@ class JMXAgentFacade {
             handler(beanName, gbean)
         }
     }
-
 }
-
 
