@@ -181,7 +181,6 @@ class CLI {
         def terminal = new TerminalController(
             name: 'Jagger Terminal',
             daemon: true,
-            mainThread: Thread.currentThread(),
             config: new Config(props: config))
         terminal.start()
 
