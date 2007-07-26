@@ -20,11 +20,15 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying Tomcat connectors.
+ */
 class ConnectorPanel extends PanelBase {
     static final name = 'Connectors'
     static final description = 'Tomcat connectors'
             
     void generate(content) {
+        // usually, there's two (HTTP and AJP)
         controller.tomcat.connectors.each { name, bean ->
             BigDecimal reqs = bean.requests.requestCount
             BigDecimal errs = bean.requests.errorCount

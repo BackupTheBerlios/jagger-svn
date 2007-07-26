@@ -22,6 +22,9 @@ import java.text.DateFormat;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying general JVM information and a memory summary.
+ */
 class JvmPanel extends PanelBase {
     static final name = 'JVM'
     static final description = 'JVM statistics'

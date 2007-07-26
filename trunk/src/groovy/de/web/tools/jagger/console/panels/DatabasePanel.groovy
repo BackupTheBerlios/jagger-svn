@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: DatabasePanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -20,6 +20,9 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying database connection pools.
+ */
 class DatabasePanel extends PanelBase {
     static final name = 'DB Pools'
     static final description = 'Database pools'

@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: HelpPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -21,6 +21,9 @@ import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
 
 
+/**
+ *  Display possible keystrokes including a list of configured panels.
+ */
 class HelpPanel extends PanelBase {
     static final name = 'Help'
     static final description = 'This help panel'

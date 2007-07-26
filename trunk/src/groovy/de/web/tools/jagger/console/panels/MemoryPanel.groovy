@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: MemoryPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -20,6 +20,9 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying detailed memory and garbage collection statistics.
+ */
 class MemoryPanel extends PanelBase {
     static final name = 'Memory'
     static final description = 'Detailed memory statistics'
@@ -33,8 +36,12 @@ class MemoryPanel extends PanelBase {
         content << ''
         content << h1('Garbage Collection')
         content << "${label('GC Queue')} ${Fmt.humanCount(controller.jvm.zombieCount)} unfinalized objects"
+
+        // collection time info is relative to startup, so this is our "now"
         def uptime = controller.jvm.uptime * 1000
+
         controller.jvm.GC.each { name, gc ->
+            // calculate amount of memory freed by last GC
             def freed = 0
             gc.MemoryPoolNames.each { poolname ->
                 if (gc.LastGcInfo != null) {

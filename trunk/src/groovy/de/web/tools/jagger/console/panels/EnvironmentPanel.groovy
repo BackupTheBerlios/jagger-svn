@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: EnvironmentPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -20,11 +20,15 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying JVM paths, command line arguments and system properties.
+ */
 class EnvironmentPanel extends PanelBase {
     static final name = 'Environment'
     static final description = 'Runtime environment'
 
     void generate(content) {
+        // helper to dump a path list
         def dumpPath = { label, path ->
             if (label != null) {
                 content << "${' ' * controller.INDENT}${controller.view.Ansi.LIGHT_GRAY}${label}${controller.view.Ansi.NORMAL}"
@@ -43,7 +47,6 @@ class EnvironmentPanel extends PanelBase {
         content << ''
         content << h1('Command line arguments')
         dumpPath(null, controller.jvm.inputArguments)
- 
 
         content << ''
         content << h1('System Properties')

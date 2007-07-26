@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: WebappPanel.groovy 122671 2007-07-06 08:27:43Z jhe $
+    $Id$
 */
 
 package de.web.tools.jagger.console.panels;
@@ -20,14 +20,20 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying web applications and their servlets.
+ */
 class WebappPanel extends PanelBase {
     static final name = 'Webapps'
     static final description = 'Web applications'
 
     void generate(content) {
+        // remote "now" in seconds
         def now = controller.jvm.startTime / 1000.0 + controller.jvm.uptime
 
+        // iterate over all web contexts, showing a section per context
         controller.tomcat.contexts.each { name, bean ->
+            // application state (1 = running)
             def state = bean.webapp.state
 
             content << ''
@@ -35,21 +41,25 @@ class WebappPanel extends PanelBase {
             if (state) {
                 content << "${label('Started')} ${Fmt.daysTime(now - bean.webapp.startTime / 1000.0)} ago in ${Fmt.humanTime(bean.webapp.startupTime)}  total time ${Fmt.daysTime(bean.webapp.processingTime / 1000.0)}"
             } else {
-                content << label('State') + alert('not running')
+                content << "${label('State')} ${alert('not running')}"
             }
 
+            // session information
             content << "${label('Sessions')} active ${Fmt.humanCount(bean.session.activeSessions)} / peak ${Fmt.humanCount(bean.session.maxActive)} / rejected ${Fmt.humanCount(bean.session.rejectedSessions)} / created ${Fmt.humanCount(bean.session.sessionCounter)}"
             content << "${label('Lifetimes')} avg. ${Fmt.humanTime(bean.session.sessionAverageAliveTime * 1000)} / max. ${Fmt.humanTime(bean.session.sessionMaxAliveTime * 1000)}"
 
+            // add a line for idle servlets, and collect them in a list
             def unused_idx = content.size()
             def unused = []
             content << label('Idle servlets') + ' '
 
+            // iterate over all servlets in this context
             bean.webapp.servlets.each { servletobject ->
                 def servlet = controller.agent.getBean(servletobject)
                 def servletname = servlet.name().getKeyProperty('name')
                 def reqs = servlet.requestCount
 
+                // idle means no requests yet
                 if (reqs == 0) {
                     unused << servletname
                 } else {
@@ -61,11 +71,14 @@ class WebappPanel extends PanelBase {
                     if (err_pc > (controller.config.props.'threshold.request.errors' as BigDecimal))
                         error_info = alert(error_info)
 
+                    // add servlet info
                     content << "${h2(servletname)} (loaded in ${Fmt.humanTime(servlet.loadTime).trim()})"
                     content << "${label('Requests')} ${Fmt.humanCount(reqs)} / errors $error_info"
                     content << "${label('Processing time')} avg. ${Fmt.humanTime(avg_time)} / max. ${Fmt.humanTime(servlet.maxTime)} / total ${Fmt.daysTime(servlet.processingTime / 1000.0)}"
                 }
             }
+
+            // append list of idle servlets to previously created line
             content[unused_idx] += unused.join(', ')
         }
     }

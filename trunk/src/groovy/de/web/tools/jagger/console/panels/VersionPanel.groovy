@@ -20,8 +20,17 @@ package de.web.tools.jagger.console.panels;
 import de.web.tools.jagger.util.Fmt;
 
 
+/**
+ *  Panel displaying versions of the runtime environment and registered
+ *  application components.
+ *  See "src/conf/applicationContext.xml" for details on component registration.
+ */
 class VersionPanel extends PanelBase {
+    // indent for version info
     static final INDENT = 10
+
+    // maximum length of a version string (gets truncated if longer)
+    static final MAX_VERSION_LENGTH = 15
 
     static final name = 'Versions'
     static final description = 'Component versions'
@@ -38,16 +47,19 @@ class VersionPanel extends PanelBase {
         // assemble component version info
         def componentsByType = new TreeMap()
         controller.jvm.components.each {
-            if (!componentsByType.containsKey(it.type))
+            if (!componentsByType.containsKey(it.type)) {
                 componentsByType[it.type] = new TreeMap()
+            }
             componentsByType[it.type][it.name] = it.version
         }
 
-        def padding = controller.view.COLS - INDENT - 15
+        // display versions grouped by component type
+        def padding = controller.view.COLS - INDENT - MAX_VERSION_LENGTH
         componentsByType.each { componentType, componentMap ->
             content << ''
             content << h1("${componentType} versions")
 
+            // components of this type...
             componentMap.each { name, version ->
                 content << "${''.padLeft(INDENT)} ${name.padRight(padding)} $version"
             }

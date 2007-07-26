@@ -23,6 +23,9 @@ import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
 
 
+/**
+ *  Panel displaying application information, copyright, license, etc.
+ */
 class AboutPanel extends PanelBase {
     static final name = 'About'
     static final description = 'About this program'
