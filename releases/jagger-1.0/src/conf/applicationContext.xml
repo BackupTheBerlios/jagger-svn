@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN"
+    "http://www.springframework.org/dtd/spring-beans.dtd">
+<!--
+    Main spring application context.
+
+    Copyright (c) 2007 by 1&1 Internet AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as
+    published by the Free Software Foundation. A copy of this license is
+    included with this software in the file "LICENSE.txt".
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    $Id$
+-->
+
+<beans>
+    <!-- JMX Beans -->
+    <bean id="mbeanServer"
+            class="org.springframework.jmx.support.MBeanServerFactoryBean">
+        <property name="locateExistingServerIfPossible" value="true"/>
+    </bean>
+
+    <bean id="exporter" class="org.springframework.jmx.export.MBeanExporter" lazy-init="false">
+        <property name="server" ref="mbeanServer"/>
+
+        <property name="beans">
+            <map>
+                <entry key="de.web.management:type=VersionInfo,name=@project.name@" 
+                       value-ref="versionInfo"/>
+            </map>
+        </property>
+
+        <!-- export "value" property only -->
+        <property name="assembler">
+          <bean class="org.springframework.jmx.export.assembler.MethodNameBasedMBeanInfoAssembler">
+            <property name="managedMethods">
+              <value>getValue</value>
+            </property>
+          </bean>
+        </property>
+
+        <!-- Ensure version information is unique -->
+        <property name="registrationBehaviorName"
+                  value="REGISTRATION_FAIL_ON_EXISTING"/>
+    </bean>
+
+    <!--
+        Application version information exported according to WEB.DE standards
+        (DON'T PANIC, the description is way longer than the actual bean).
+
+        This relies on the built-in classes java.text.Annotation and
+        java.util.Map to structure the version information in a JMX-compatible
+        way, meaning you need no own code (Spring is enough) and marshalling
+        is no problem.
+
+        The bean's object name MUST follow the pattern
+        
+            de.web.management:type=VersionInfo,name=<component name>
+
+        with "<component name>" being the component's name, which has to be
+        unique within a JVM. You can also add further keys to the bean name,
+        like "...,context=<context name>" for a web application deployed several
+        times. Always keep the domain name "de.web.management" unchanged, regard
+        it as an identifying unique value like a namespace URL in XML.
+
+        The bean itself is an Annotation containing a Map with the following
+        keys:
+
+            name
+                component name as a String (might be different from the "name"
+                in the bean's object name, e.g. in an unqualified form). 
+
+            type
+                One of
+                
+                    application     General application
+                    webapplication  Web application (WAR)
+                    library         Java library (JAR)
+                    plugin          Plugin (dynamically loaded JAR)
+                    producer        Published remote API
+                    consumer        Consumed remote API
+
+            version
+                Version information as a String.
+
+        A single component can publish several version beans, f.x. a plugin
+        that implements a remote API and consumes two other APIs for that
+        purpose. Note that you'd typically end up with something like the
+        following as one of the beans for a plugin "foo" that consumes a
+        "bar" API:
+
+            de.web.management:type=VersionInfo,name=foo,consumes=bar = [
+                name:       'bar'
+                type:       'consumer'
+                version:    '1.1'
+            ]
+     -->
+    <bean id="versionInfo" class="java.text.Annotation">
+        <constructor-arg>
+            <map>
+                <entry key="name" value="@project.name@"/>
+                <entry key="type" value="application"/>
+                <entry key="version" value="@project.version@"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>

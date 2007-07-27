@@ -1,0 +1,73 @@
+Jagger Quick Installation Guide
+===============================
+
+Possibly more thorough and up to date instructions can be found on
+http://openfacts.berlios.de/index-en.phtml?title=Jagger_Installation
+
+
+Installing Java and Groovy
+--------------------------
+
+I assume that the intended audience of Jagger, namely administrators
+and developers, are able to install a JVM and Groovy on their own.
+
+Jagger is tested with Sun Java 1.6.0 and Groovy 1.0 and 1.1-beta-2. When
+installing Groovy, don't forget to remove "mx4j-*.jar" from the "lib"
+directory, since this is not needed for newer JVMs and actually prevents
+JMX code from running correctly on them.
+
+If you want to build from source, you'll also need to have Gant available.
+Other dependencies are downloaded as needed, during building (i.e. you need
+an internet connection, at least once).
+
+Download sources:
+ * http://www.java.com/en/download/manual.jsp
+ * http://groovy.codehaus.org/Download
+ * http://groovy.codehaus.org/Gant
+
+
+Installing the binary distribution
+----------------------------------
+
+The binary distribution of Jagger contains everything it needs to run,
+except Java and Groovy. It always unpacks to a versioned directory. The
+distribution archives are available from
+
+   http://developer.berlios.de/project/showfiles.php?group_id=8650
+
+After you downloaded and unpacked your preferred archive format, change
+into the "jagger-X.X" directory and test your installation by calling
+
+   bin/jagger -n YOURHOSTNAME:YOURJMXPORT -u YOURJMXUSER -w YOURJMXPWD
+
+using appropriate values for your environment, of course. Before doing
+so, please make sure the target JMX connection works by connecting using
+jconsole.
+
+When you made sure everything works as you expect, you can install jagger
+permanently onto your system by simply copying everything to /usr, /usr/local
+or any other place you desire, since the archive contents follow the standard
+UNIX layout. For /usr/local this would be
+
+   cp -ar . /usr/local
+
+
+Installing the source distribution
+----------------------------------
+
+If you installed all prerequisites (Java, Groovy, Gant), building
+Jagger requires very few steps:
+
+ * download one of the source archives from BerliOS, see
+   http://developer.berlios.de/project/showfiles.php?group_id=8650
+
+ * unpack the archive (will always unpack into a versioned directory)
+
+ * go into that directory and call "gant package"
+
+ * you'll get a binary package in "target", install according to the
+   above instructions
+
+
+Have fun and enjoy!
+

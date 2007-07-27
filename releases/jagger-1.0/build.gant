@@ -1,0 +1,410 @@
+// Build script for Jagger
+//
+// Based on GroovyQuickStart by davilameister@gmail.com
+// See http://softwarecraft.org/blog/?page_id=11
+//
+// $Id$
+
+import org.codehaus.groovy.runtime.InvokerHelper;
+
+
+groovyHome = System.getenv().'GROOVY_HOME'
+
+// validate that 'GROOVY_HOME' has been defined
+if (!groovyHome) {
+    Ant.fail('You MUST set the environment variable GROOVY_HOME to compile this project.')
+}
+
+// version of Groovy used to build us
+groovyVersion = InvokerHelper.getVersion()
+has_groovydoc = !groovyVersion.startsWith('1.0')
+
+// name & version number of the project
+Ant.property(file: 'build.properties')
+def project_name = Ant.project.properties.'project.name'
+def version = Ant.project.properties.'project.version'
+Ant.echo(message: "Building ${project_name}-${version}...")
+
+// declare reference to project folders
+def base_dir = new File("").canonicalPath
+def conf_dir = "${base_dir}/src/conf"
+def java_source_dir = "${base_dir}/src/java" 
+def groovy_source_dir = "${base_dir}/src/groovy"
+def java_tests_dir = "${base_dir}/tests_src/java"
+def groovy_tests_dir = "${base_dir}/tests_src/groovy"
+def bin_dir = "${base_dir}/bin"
+def docs_dir = "${base_dir}/docs"
+def lib_dir = "${base_dir}/lib"
+def cache_dir = "${base_dir}/.buildcache" 
+def jar_cache = cache_dir + "/jars"
+def jar_dependencies = []
+
+// declare folders used to create build artifacts
+def target_dir = "${base_dir}/target"
+def target_docs_dir = "${target_dir}/docs" 
+def target_classes_dir = "${target_dir}/classes" 
+def target_tests_dir = "${target_dir}/tests" 
+def target_reports_dir = "${target_dir}/reports"
+
+// declare installation structure
+def bin_path = 'bin'
+def lib_path = "share/${project_name}-${version}/lib"
+def share_path = "share/${project_name}-${version}"
+def conf_path = "share/${project_name}-${version}/conf"
+def doc_path = "share/doc/${project_name}-${version}"
+
+// declare folders used to create distribution artifacts
+def build_dir = "${target_dir}/${project_name}-${version}" 
+def build_bin_dir = "${build_dir}/${bin_path}"
+def build_lib_dir = "${build_dir}/${lib_path}"
+def build_share_dir = "${build_dir}/${share_path}"
+def build_conf_dir = "${build_dir}/${conf_path}"
+def build_doc_dir = "${build_dir}/${doc_path}"
+
+// The name of the jar file containing the project's Groovy and Java classes
+jar_name = "${project_name}-${version}.jar"
+
+// include targets provided by Gant
+includeTargets << gant.targets.Clean
+cleanPattern << [ '**/*~',  '**/*.bak' ]
+cleanDirectory << target_dir
+clobberDirectory << [target_dir]
+
+
+// package formats
+package_formats = [
+    tgz: [task: 'tar', extension: 'tar.gz',  modename: 'mode',     args: [compression: 'gzip']],
+    bz2: [task: 'tar', extension: 'tar.bz2', modename: 'mode',     args: [compression: 'bzip2']],
+    zip: [task: 'zip', extension: 'zip',     modename: 'filemode', args: [:]],
+]
+
+
+// name of deliverables
+def artifactName(tag, extension) {
+    // XXX Any way to access the outer scope statically?
+    def project_name = Ant.project.properties.'project.name'
+    def version = Ant.project.properties.'project.version'
+    def groovyVersion = InvokerHelper.getVersion()
+
+    return "${project_name}-${tag}-${version}-groovy-${groovyVersion}.${extension}"
+}
+
+
+/*
+    create the folders required by the build
+*/
+task(initialize: 'Initialize prior to a build') {
+    // create target directories
+    Ant.mkdir(dir: target_dir)
+    Ant.mkdir(dir: target_docs_dir)
+    Ant.mkdir(dir: target_classes_dir)
+    Ant.mkdir(dir: target_tests_dir)
+    Ant.mkdir(dir: target_reports_dir)
+
+    Ant.mkdir(dir: build_dir)
+    Ant.mkdir(dir: build_conf_dir)
+    Ant.mkdir(dir: build_lib_dir)
+    Ant.mkdir(dir: build_bin_dir)
+    Ant.mkdir(dir: build_doc_dir)
+
+    // download dependant JARs
+    depends(download)
+
+    // declare the classpath used to compile 
+    Ant.path(id: 'compile_classpath') { 
+        fileset(dir: groovyHome + '/lib', includes: '*.jar') 
+        fileset(dir: lib_dir, includes: '*.jar')
+        fileset(dir: jar_cache, includes: '*.jar')
+    }
+
+    // declare the groovy compiler task
+    Ant.taskdef(name: 'groovyc',
+        classname: 'org.codehaus.groovy.ant.Groovyc',
+        classpathref: 'compile_classpath')
+}
+
+
+/*
+    download libraries we're depending on
+*/
+task(download: "download libraries we're depending on") {
+    // create cache dir
+    Ant.mkdir(dir: jar_cache)
+
+    // download all given dependencies to cache, if not there
+    def cached_jars = []
+    Ant.project.properties.each { key, val ->
+        if (key.startsWith('dependency.') && key.endsWith('.url')) {
+            def url = new URL(val)
+            def jarname = new File(url.path).name
+            def jarfile = new File("${jar_cache}/${jarname}")
+            if (jarfile.canRead()) {
+                cached_jars << jarname
+            } else {
+                Ant.get(src: val, dest: jarfile.absolutePath,
+                    verbose: 'true', usetimestamp: 'true')
+            }
+            
+            jar_dependencies << jarname
+        }
+    }
+    if (!cached_jars.isEmpty()) {
+        Ant.echo(message: "Using ${cached_jars.join(', ')} from cache.")
+    }
+}
+
+
+/*
+    target used to compile the Groovy and Java classes located in the src folder
+    this target compiles the Java classes using the jars in the Groovy lib folder and the project lib folder
+    as classpath. It then compile the groovy classes using the previous classpath plus the compiled Java classes
+*/
+task(compile: 'Compile all classes.') {
+    depends(initialize)
+
+    Ant.javac(srcdir: java_source_dir, destDir: target_classes_dir,
+        source: Ant.project.properties.'java.source',
+        target: Ant.project.properties.'java.target',
+        debug: 'on', classpathref: 'compile_classpath')
+
+    Ant.groovyc(srcdir: groovy_source_dir, destDir: target_classes_dir){
+        classpath {
+            path(refid: 'compile_classpath')
+            pathelement(location: target_classes_dir)
+        }
+    }
+}
+
+
+/*
+    target used to compile the Groovy and Java unit tests located in the test_src folder
+    this target compiles using the jars in the Groovy lib folder and the project lib folder
+    as classpath. This target is mainly used by the test target as a dependency
+*/
+task(compile_tests: 'Compile all the tests.') {
+    depends(compile)
+
+    Ant.javac(srcdir: java_tests_dir,
+            destDir: target_tests_dir,
+            source: '1.4', target: '1.4', debug: 'on') {
+        classpath {
+            path(refid: 'compile_classpath')
+            pathelement(location: target_classes_dir)
+        }
+    }
+
+    Ant.groovyc(srcdir: groovy_tests_dir,
+            destdir: target_tests_dir) {
+        classpath {
+            path(refid: 'compile_classpath')
+            pathelement(location: target_classes_dir)
+        }
+    }
+}
+
+
+/*
+    executes all the unit tests in the project        
+*/
+task(test: 'Run all the tests in the build.') {
+    depends(compile_tests)
+
+    Ant.junit(printsummary: 'yes') {
+        formatter(type: 'plain')
+
+        batchtest(fork: 'yes', todir: target_reports_dir) {
+            fileset(dir: target_tests_dir, includes: '**/*Test.class')
+        }
+
+        classpath {
+            pathelement(location: target_tests_dir)
+            pathelement(location: target_classes_dir)
+            path(refid: 'compile_classpath')
+        }
+    }
+}
+
+
+/*
+    generate documentation
+*/
+task(doc: 'Generate API documentation.') {
+    depends(initialize)
+
+    if (!has_groovydoc) {
+        Ant.fail("Groovy ${groovyVersion} has no groovydoc task!")
+    }
+
+    // declare the groovy documentation task
+    Ant.taskdef(name: 'groovydoc',
+        classname: 'org.codehaus.groovy.ant.Groovydoc')
+
+    // generate the docs
+    Ant.groovydoc(sourcepath: groovy_source_dir, destdir: target_docs_dir,
+        ('private'): false)
+}
+
+
+/*
+    creates a build folder that contains the project's main artifacts
+    in a way that is suitable for packaging
+*/
+task(build: 'Create a build of the project') {
+    depends(compile)
+
+    // filterset for "build" filtering
+    Ant.echoproperties(destfile: "${target_dir}/build-filter.properties") {
+        propertyset {
+            propertyref(prefix: "project.")
+        }
+    }
+    Ant.filterset(id: 'build-filter') {
+        filtersfile(file: "${target_dir}/build-filter.properties")
+        filter(token: 'bin_path',  value: bin_path)
+        filter(token: 'lib_path',  value: lib_path)
+        filter(token: 'conf_path', value: conf_path)
+        filter(token: 'doc_path',  value: doc_path)
+    }
+
+    // copy configuration files
+    Ant.copy(todir: target_classes_dir) {
+        fileset(dir: conf_dir, includes: '*')
+        filterset(refid: 'build-filter')
+    }
+
+    // build jar
+    Ant.jar(destfile: build_lib_dir + '/' + jar_name,
+            basedir: target_classes_dir){
+        manifest{
+            attribute(name: 'Built-By', value: "${System.getenv().'USER'}@webde.de")
+            attribute(name: 'Main-Class', value: "${Ant.project.properties.'project.package'}.CLI")
+        }
+    }
+
+    // copy user-modifiable configuration files
+    Ant.copy(todir: build_conf_dir) {
+        fileset(dir: conf_dir, includes: 'user*')
+        fileset(dir: conf_dir, includes: '*.properties')
+        filterset(refid: 'build-filter')
+    }
+
+    // copy shell wrappers
+    Ant.copy(todir: build_bin_dir) {
+        fileset(dir: bin_dir, includes: '*.sh')
+        mapper {
+            globmapper(from: '*.sh', to: '*')
+        }
+        filterset(refid: 'build-filter')
+    }
+    Ant.chmod(dir: build_bin_dir, includes: '*', perm: '+x')
+
+    // copy docs
+    Ant.copy(todir: build_doc_dir) {
+        fileset(dir: '.', includes: '*.txt')
+    }
+    Ant.copy(todir: build_doc_dir + '/samples') {
+        fileset(dir: '.', includes: 'jagger.properties')
+    }
+    Ant.copy(todir: build_doc_dir) {
+        fileset(dir: docs_dir, includes: '*.txt')
+        fileset(dir: docs_dir + '/website', includes: '**')
+    }
+    Ant.copy(todir: build_doc_dir + '/img/arch') {
+        fileset(dir: docs_dir + '/arch', includes: '**/*.jpg')
+    }
+
+    // copy jars
+    Ant.copy(todir: build_lib_dir) {
+        fileset(dir: lib_dir, includes: '*')
+        fileset(dir: jar_cache, includes: jar_dependencies.join(','))
+    }
+}
+
+
+/*
+    make a source distribution
+*/
+task('dist': 'Create a full source distribution of the project') {
+    // call dependant tasks
+    depends(build) 
+    if (has_groovydoc) {
+        depends(doc)
+    }
+
+    // get list of source files from SVN
+    Ant.echo(taskname: 'svn', message: 'Getting list of source files...')
+    src_files = 'svn ls -R .'.execute().text.trim().replace('\n', ',')
+
+    // don't collide with binary distribution paths!
+    root = "${project_name}-${version}-src"
+
+    // build distribution files
+    package_formats.each { format, info ->
+        def args = info.args.clone()
+        args.taskName = "src-${format}"
+        args.destfile = "${target_dir}/${artifactName('src', info.extension)}"
+
+        Ant.&invokeMethod(info.task, [args,
+            {
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: '.', prefix: root, includes: src_files])
+
+                if (has_groovydoc) {
+                    Ant.&invokeMethod("${info.task}fileset", [
+                        dir: target_docs_dir, prefix: root + "/docs/api"])
+                }
+            }
+        ])
+    }
+}
+
+
+/*
+    make a binary distribution
+*/
+task('package': 'Create a full binary distribution of the project') {
+    depends(build) 
+
+    root = "${project_name}-${version}"
+
+    // build distribution files
+    package_formats.each { format, info ->
+        def args = info.args.clone()
+        args.taskName = "bin-${format}"
+        args.destfile = "${target_dir}/${artifactName('bin', info.extension)}"
+
+        Ant.&invokeMethod(info.task, [args,
+            {
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: build_dir, prefix: root, excludes: 'bin/*'])
+                Ant.&invokeMethod("${info.task}fileset", [
+                    dir: build_dir, prefix: root, includes: 'bin/*', (info.modename): '755'])
+            }
+        ])
+    }
+}
+
+
+/*
+    make a full release
+*/
+task('release': 'Create a full release of the project') {
+    depends(dist)
+    depends('package')
+}
+
+
+/*
+    build the website
+*/
+task('www': 'Build website tree from templates.') {
+}
+
+
+/*
+    run tests by default.
+*/
+task('default': 'The default target, currently test.') {
+    test()
+}
+

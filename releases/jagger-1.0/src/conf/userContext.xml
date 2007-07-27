@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+    User-configurable spring application context for Jagger.
+
+    $Id$
+-->
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN"
+        "http://www.springframework.org/dtd/spring-beans.dtd" [
+    <!ENTITY panels "de.web.tools.jagger.console.panels">
+]>
+
+<beans>
+    <!-- Panel selection to show -->
+    <bean id="panels" class="java.util.HashMap">
+        <constructor-arg>
+            <map>
+                <!-- the help (h) and about (!) panels are enforced! -->
+                <entry key="c" value="&panels;.ConnectorPanel"/>
+                <entry key="d" value="&panels;.DatabasePanel"/>
+                <entry key="e" value="&panels;.EnvironmentPanel"/>
+                <entry key="j" value="&panels;.JvmPanel"/>
+                <entry key="m" value="&panels;.MemoryPanel"/>
+                <entry key="v" value="&panels;.VersionPanel"/>
+                <entry key="w" value="&panels;.WebappPanel"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+</beans>

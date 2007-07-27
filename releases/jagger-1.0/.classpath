@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src/java"/>
+	<classpathentry kind="src" path="src/groovy"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="${user.home}/lib/groovy-1.0/lib/commons-io-1.2.jar"/>
+	<classpathentry exported="true" kind="lib" path="${user.home}/lib/groovy-1.0/commons-lang-2.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="${user.home}/lib/groovy-1.0/groovy-all-1.0-RC-01.jar"/>
+	<classpathentry exported="true" kind="lib" path="target"/>
+	<classpathentry kind="output" path="build/classes"/>
+</classpath>

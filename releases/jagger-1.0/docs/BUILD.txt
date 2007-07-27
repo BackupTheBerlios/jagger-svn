@@ -1,0 +1,69 @@
+jagger Build Instructions
+=========================
+
+    Copyright (c) 2007 by 1&1 Internet AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as
+    published by the Free Software Foundation. A copy of this license is
+    included with this software in the file "LICENSE.txt".
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+
+PROJECT ORGANIZATION
+--------------------
+
+The project's root contains the most important documentation any user will need, and the files necessary to build it.
+Most notably is "build.gant", which contains the build instructions, and "build.properties" for its configuration.
+
+The file "jagger.properties" is a sample cluster configuration file
+which can be used for testing, but it's also possible to test using
+command line parameters (the obvious choice if you're not the main
+developer). 
+
+Subdirectories:
+    bin                 Shell wrappers
+    docs                Documentation and project website
+    lib                 A place for additional JARs (see building notes below)
+    src/conf            Sample configuration files
+    src/groovy          Groovy source tree (compiled 2nd)
+    src/java            Java source tree (compiled 1st)
+    tests_src/groovy    Groovy unit test source tree
+    tests_src/java      Java unit test source tree
+
+The package structure is in "de.web.tools.jagger", with the following layout:
+    de.web.tools.jagger                 External interface (command line)
+    de.web.tools.jagger.console         Terminal display handling
+    de.web.tools.jagger.console.panels  Different types of display panels
+    de.web.tools.jagger.jmx             JMX support
+    de.web.tools.jagger.util            Utility classes
+
+
+BUILDING JAGGER
+---------------
+
+"gant build" creates a distribution structure in "target/jagger-X.X".
+The build script uses some ant-contrib tasks, so make sure your
+environment is configured accordingly (the newest gant releases are
+supposed to do this automatically). 
+
+Dependencies needed by jagger (currently Spring) are downloaded once
+from the Maven repository and are cached in a directory named
+".buildcache". "gant clean" deletes the "target" directory, but NOT the
+download cache. If you ever want to do that, manually remove the
+".buildcache" directory. 
+
+"gant doc" works only with Groovy 1.1 and creates the API documentation.
+If you use 1.1, it's also automatically packed into the source release. 
+
+
+RELEASING JAGGER
+----------------
+
+"gant release" builds both the source (gant dist) and the binary (gant
+package) distribution archives, in three different package formats. 
+

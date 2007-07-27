@@ -1,0 +1,35 @@
+/*  Jagger Default Styles
+*/
+body {
+    background-color: #FFFFFF;
+    color:#000000;
+    font-family:Times New;
+    font-size:12pt;
+}
+td.headline {
+    font-family:Helvetica;
+    font-size:28pt;
+}
+a {
+    color: #0063a5; /* #CC7706 */
+}
+a.nonexistent {
+    font-weight: bold;
+    background-color: #F8F8F8;
+    color: #FF2222;
+}
+dl {
+    margin-top: 1pt;
+}
+ul {
+    margin-top: 1pt;
+}
+ol {
+    margin-top: 1pt;
+}
+pre {
+    font-family:Lucida Console,Courier New,Courier,monotype;
+    font-size: 10pt;
+    margin-top: 8pt;
+    margin-bottom: 8pt;
+}
