@@ -26,3 +26,6 @@ the "LICENSE.txt" file.
 For instructions on how to install the software on your computer, read
 "INSTALL.txt".
 
+If you plan to hack away at the sources, see "docs/BUILD.txt" for some hints
+on getting started.
+
