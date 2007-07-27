@@ -209,7 +209,7 @@ task(compile_tests: 'Compile all the tests.') {
 task(test: 'Run all the tests in the build.') {
     depends(compile_tests)
 
-    Ant.junit(printsummary: 'yes') {
+    Ant.junit(printsummary: 'yes', showoutput: 'true') {
         formatter(type: 'plain')
 
         batchtest(fork: 'yes', todir: target_reports_dir) {

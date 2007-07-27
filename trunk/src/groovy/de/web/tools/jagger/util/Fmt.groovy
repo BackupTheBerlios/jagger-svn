@@ -38,7 +38,7 @@ class Fmt {
      */
     static private Double roundTo(Double value, Integer places) {
         def scale = 10.0 ** places
-        return (value * scale + 0.5).round() / scale
+        return (value * scale).round() / scale
     }
 
     /**
