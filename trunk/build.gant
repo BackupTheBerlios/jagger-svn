@@ -11,7 +11,7 @@ import org.codehaus.groovy.runtime.InvokerHelper;
 groovyHome = System.getenv().'GROOVY_HOME'
 
 // validate that 'GROOVY_HOME' has been defined
-if (groovyHome?.size() <= 0) {
+if (!groovyHome) {
     Ant.fail('You MUST set the environment variable GROOVY_HOME to compile this project.')
 }
 
