@@ -346,17 +346,12 @@ task('dist': 'Create a full source distribution of the project') {
         args.taskName = "src-${format}"
         args.destfile = "${target_dir}/${artifactName('src', info.extension)}"
 
-        Ant.&invokeMethod(info.task, [args,
-            {
-                Ant.&invokeMethod("${info.task}fileset", [
-                    dir: '.', prefix: root, includes: src_files])
-
-                if (has_groovydoc) {
-                    Ant.&invokeMethod("${info.task}fileset", [
-                        dir: target_docs_dir, prefix: root + "/docs/api"])
-                }
+        Ant."${info.task}"(args) {
+            Ant."${info.task}fileset"(dir: '.', prefix: root, includes: src_files)
+            if (has_groovydoc) {
+                Ant."${info.task}fileset"(dir: target_docs_dir, prefix: root + "/docs/api")
             }
-        ])
+        }
     }
 }
 
@@ -375,14 +370,12 @@ task('package': 'Create a full binary distribution of the project') {
         args.taskName = "bin-${format}"
         args.destfile = "${target_dir}/${artifactName('bin', info.extension)}"
 
-        Ant.&invokeMethod(info.task, [args,
-            {
-                Ant.&invokeMethod("${info.task}fileset", [
-                    dir: build_dir, prefix: root, excludes: 'bin/*'])
-                Ant.&invokeMethod("${info.task}fileset", [
-                    dir: build_dir, prefix: root, includes: 'bin/*', (info.modename): '755'])
-            }
-        ])
+        Ant."${info.task}"(args) {
+            Ant."${info.task}fileset"(dir: build_dir, prefix: root,
+                excludes: 'bin/*')
+            Ant."${info.task}fileset"(dir: build_dir, prefix: root,
+                includes: 'bin/*', (info.modename): '755')
+        }
     }
 }
 
