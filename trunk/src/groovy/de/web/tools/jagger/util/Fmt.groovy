@@ -102,7 +102,7 @@ class Fmt {
         if (stripunit) unit = unit.trim()
 
         //return "$value $unit"
-        return String.format(Locale.US, '%6.1f %s', roundTo(value, 2), unit)
+        return String.format(Locale.US, '%6.1f %s', roundTo(value, 6), unit)
     }
 
     /**
@@ -128,9 +128,9 @@ class Fmt {
      *  @param bytes Data amount to format.
      *  @return Formatted size.
      */
-    static humanSize(Long bytes) {
+    static humanSize(Number bytes) {
         if (bytes < 1024)
-            return String.format(Locale.US, '%5d  bytes', bytes)
+            return String.format(Locale.US, '%5d  bytes', bytes as Long)
 
         Double value = bytes
         def unit = null
@@ -164,9 +164,11 @@ class Fmt {
      *  @return Limited text.
      */
     static shorten(String text, Integer maxlen) {
+        assert maxlen >= 5 // assert sensible input values
+
         if (text.length() > maxlen) {
             // show 1/3 of the start and 2/3 of the end
-            Integer cutpoint = maxlen / 3
+            Integer cutpoint = maxlen / 3 - 1
             def shortened = text[0..cutpoint] + '...' + text.substring(text.length()-maxlen+cutpoint+4)
             assert maxlen == shortened.length()
             return shortened
