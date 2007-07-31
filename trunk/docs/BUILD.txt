@@ -17,8 +17,10 @@ jagger Build Instructions
 PROJECT ORGANIZATION
 --------------------
 
-The project's root contains the most important documentation any user will need, and the files necessary to build it.
-Most notably is "build.gant", which contains the build instructions, and "build.properties" for its configuration.
+The project's root contains the most important documentation any user
+will need, and the files necessary to build it. Most notably is
+"build.gant", which contains the build instructions, and
+"build.properties" for its configuration. 
 
 The file "jagger.properties" is a sample cluster configuration file
 which can be used for testing, but it's also possible to test using
