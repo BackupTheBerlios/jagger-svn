@@ -186,7 +186,9 @@ task(compile_tests: 'Compile all the tests.') {
 
     Ant.javac(srcdir: java_tests_dir,
             destDir: target_tests_dir,
-            source: '1.4', target: '1.4', debug: 'on') {
+            source: Ant.project.properties.'java.source',
+            target: Ant.project.properties.'java.target',
+            debug: 'on') {
         classpath {
             path(refid: 'compile_classpath')
             pathelement(location: target_classes_dir)
