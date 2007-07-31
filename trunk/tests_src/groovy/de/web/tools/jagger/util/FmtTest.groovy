@@ -26,9 +26,10 @@ import groovy.util.GroovyTestCase;
 class FmtTest extends GroovyTestCase {
     final static double DELTA = 1E-9
 
-    private void checkData(String methodName, List data) {
+    private void checkData(String methodName, Collection data) {
         data.each { result, input ->
-            assertEquals(result, Fmt.invokeMethod(methodName, input as Object[]))
+            if (!(input instanceof Collection)) input = [input]
+            assertEquals(result, Fmt."$methodName"(*input))
         }
     }
 
