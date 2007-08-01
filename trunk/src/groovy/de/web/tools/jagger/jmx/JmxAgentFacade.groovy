@@ -48,7 +48,7 @@ class JMXAgentFacade {
      *  @return Opened connection.
      */
     synchronized private openConnection() {
-        // create connection on demand, in a fast and thread-safe way
+        // create connection on demand
         if (jmxConnection == null) {
             def jmxEnv = null
             if (password != null) {
@@ -73,7 +73,7 @@ class JMXAgentFacade {
      *  @param objname Either a String or ObjectName describing a MBean.
      *  @return ObjectName for the given name.
      */
-    ObjectName makeObjectName(objname) {
+    static ObjectName makeObjectName(objname) {
         // easy way out?
         if (ObjectName.isInstance(objname)) {
             return objname
