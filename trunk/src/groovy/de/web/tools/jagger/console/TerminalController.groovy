@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.util.License;
-import de.web.tools.jagger.jmx.*;
+import de.web.tools.jagger.jmx.JMXAgentFacade;
 import de.web.tools.jagger.console.TerminalView;
 import de.web.tools.jagger.console.panels.HelpPanel;
 import de.web.tools.jagger.console.panels.AboutPanel;
@@ -71,10 +71,10 @@ class TerminalController extends Thread {
     private agent
     
     // JVM JMX facade
-    private jvm
+    def jvm = null
     
     // Tomcat JMX facade
-    private tomcat
+    def tomcat = null
     
     // list of hostnames or JMX serivce URLs
     private hosts = []
@@ -257,8 +257,6 @@ class TerminalController extends Thread {
     synchronized void selectHost(hostidx) {
         // reset state of old connection
         agent = null
-        jvm = null
-        tomcat = null
         frozen = false
         errorMessage = []
         currentHostIdx = hostidx
@@ -291,9 +289,9 @@ class TerminalController extends Thread {
             errorMessage = errorString.split(': ')
             view.clear()
         } else {
-            // create facades for new agent
-            jvm = new JvmFacade(agent: new_agent)
-            tomcat = new TomcatFacade(agent: new_agent)
+            // switch facades to new agent
+            jvm.agent = new_agent
+            tomcat.agent = new_agent
 
             // activate the new agent
             agent = new_agent

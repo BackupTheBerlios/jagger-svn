@@ -25,7 +25,12 @@
     <bean id="terminal" class="de.web.tools.jagger.console.TerminalController">
         <property name="name" value="Jagger Terminal"/>
         <property name="daemon" value="true"/>
+        <property name="jvm" ref="jvmFacade"/>
+        <property name="tomcat" ref="tomcatFacade"/>
     </bean>
+
+    <bean id="jvmFacade" class="de.web.tools.jagger.jmx.JvmFacade"/>
+    <bean id="tomcatFacade" class="de.web.tools.jagger.jmx.TomcatFacade"/>
 
     <!-- JMX Beans -->
     <bean id="mbeanServer"
