@@ -31,6 +31,7 @@ import javax.management.remote.JMXServiceURL;
  *  Unit tests for JMX agent facade.
  */
 class JMXAgentFacadeTest extends GroovyTestCase {
+    static final RUNTIME = 'java.lang:type=Runtime'
 
     private void usingPlatformServer(testCode) {
         def mbs = ManagementFactory.getPlatformMBeanServer()
@@ -53,7 +54,7 @@ class JMXAgentFacadeTest extends GroovyTestCase {
         }
     }
 
-    void testConnect() {
+    void testOpenConnection() {
         usingPlatformServer {
             def agent = new JMXAgentFacade(url: it)
             def conn = agent.openConnection()
@@ -67,6 +68,7 @@ class JMXAgentFacadeTest extends GroovyTestCase {
         def strname = "JUnit:name=test"
         def objname = new ObjectName(strname)
 
+        assertNotNull(objname)
         assertSame(objname, JMXAgentFacade.makeObjectName(objname))
         assertNotSame(objname, JMXAgentFacade.makeObjectName(strname))
         assertEquals(objname, JMXAgentFacade.makeObjectName(strname))
@@ -79,10 +81,32 @@ class JMXAgentFacadeTest extends GroovyTestCase {
             shouldFail(InstanceNotFoundException) {
                 agent.getBean("JUnit:name=MR.NOWHEREMAN")
             }
+
+            def runtimeBean = agent.getBean(RUNTIME)
+            assertNotNull(runtimeBean)
+            assertEquals(runtimeBean.VmVersion, System.getProperty('java.vm.version'))
         }
     }
 
     void testQueryBeans() {
+        usingPlatformAgent { agent ->
+            def countBeans = { objname ->
+                def count = 0
+                agent.queryBeans(objname) { name, bean -> count++ }
+                return count
+            }
+            
+            assertEquals(0, countBeans('JUnit:name=*'))
+            assertEquals(1, countBeans(RUNTIME))
+            assertTrue(1 < countBeans('java.lang:type=MemoryPool,*'))
+
+            agent.queryBeans(RUNTIME) { name, bean ->
+                assertSame(bean.getClass(), GroovyMBean)
+                assertEquals(name.canonicalName, RUNTIME)
+                assertEquals(bean.name().canonicalName, RUNTIME)
+            }
+
+        }
     }
 }
 

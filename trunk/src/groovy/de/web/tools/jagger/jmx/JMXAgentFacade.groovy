@@ -104,11 +104,13 @@ class JMXAgentFacade {
      */
     void queryBeans(query, handler) {
         def queryName = makeObjectName(query)
+        def conn = openConnection()
 
-        openConnection().queryMBeans(queryName, null).each { mbean ->
+        conn.queryMBeans(queryName, null).each { mbean ->
             //println mbean.inspect() + mbean.dump()
             def beanName = mbean.objectName
-            def gbean = new GroovyMBean(openConnection(), beanName)
+            def gbean = new GroovyMBean(conn, beanName)
+            //handler('name': beanName, 'mbean': gbean)
             handler(beanName, gbean)
         }
     }
