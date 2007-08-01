@@ -21,6 +21,12 @@
 -->
 
 <beans>
+    <!-- Console -->
+    <bean id="terminal" class="de.web.tools.jagger.console.TerminalController">
+        <property name="name" value="Jagger Terminal"/>
+        <property name="daemon" value="true"/>
+    </bean>
+
     <!-- JMX Beans -->
     <bean id="mbeanServer"
             class="org.springframework.jmx.support.MBeanServerFactoryBean">

@@ -22,7 +22,6 @@ import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.util.Config;
-import de.web.tools.jagger.console.TerminalController;
 
 
 /**
@@ -178,10 +177,9 @@ class CLI {
         }
 
         // create terminal controller and start it
-        def terminal = new TerminalController(
-            name: 'Jagger Terminal',
-            daemon: true,
-            config: new Config(props: config))
+        def configuration = new Config(props: config)
+        def terminal = configuration.context.getBean('terminal')
+        terminal.config = configuration
         terminal.start()
 
         // loop while not asked to shut down
