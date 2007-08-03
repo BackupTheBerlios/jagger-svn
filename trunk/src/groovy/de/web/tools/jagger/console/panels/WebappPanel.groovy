@@ -28,6 +28,8 @@ class WebappPanel extends PanelBase {
     static final description = 'Web applications'
 
     void generate(content) {
+        if (!haveTomcat(content)) return
+
         // remote "now" in seconds
         def now = controller.jvm.startTime / 1000.0 + controller.jvm.uptime
 

@@ -28,6 +28,8 @@ class DatabasePanel extends PanelBase {
     static final description = 'Database pools'
 
     void generate(content) {
+        if (!haveTomcat(content)) return
+
         content << ''
         content << h1('Database pools')
 

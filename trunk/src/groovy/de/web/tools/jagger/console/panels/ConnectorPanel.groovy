@@ -28,6 +28,8 @@ class ConnectorPanel extends PanelBase {
     static final description = 'Tomcat connectors'
             
     void generate(content) {
+        if (!haveTomcat(content)) return
+
         // usually, there's two (HTTP and AJP)
         controller.tomcat.connectors.each { name, bean ->
             BigDecimal reqs = bean.requests.requestCount

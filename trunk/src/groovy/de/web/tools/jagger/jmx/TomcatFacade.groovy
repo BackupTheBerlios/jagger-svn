@@ -17,7 +17,7 @@
 
 package de.web.tools.jagger.jmx;
 
-import javax.management.AttributeNotFoundException
+import javax.management.AttributeNotFoundException;
 
 
 /**
@@ -53,8 +53,22 @@ class TomcatFacade {
         // remember connection
         this.agent = agent
 
+        // reset caches
+        jswBean = null
+        serverBean = null
+        connectors = null
+        datasources = null
+
+        // no agent?
+        if (agent == null) return
+
         // get beans for this agent
-        jswBean = agent.getBean('JavaServiceWrapper:service=WrapperManager')
+        try {
+            jswBean = agent.getBean('JavaServiceWrapper:service=WrapperManager')
+        } catch (InstanceNotFoundException) {
+            // JSW is optional
+            jswBean = null
+        }
         serverBean = agent.getBean('Catalina:type=Server')
 
         // query the connectors
@@ -118,7 +132,7 @@ class TomcatFacade {
      *  @return Counter which identifies the instance the JSW has created
      *          during his lifetime (initially 1).
      */
-    def getJVMId() { jswBean.JVMId }
+    def getJVMId() { jswBean ? jswBean.JVMId : '1' }
 
     /**
      *  Return version information.
@@ -127,7 +141,7 @@ class TomcatFacade {
      */
     def getVersions() {
         def result = [
-            jsw: jswBean.Version,
+            jsw: jswBean ? jswBean.Version : 'N/A',
             tomcat: 'N/A',
         ]
 

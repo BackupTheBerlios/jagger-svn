@@ -107,5 +107,19 @@ abstract class PanelBase {
 
         return result
     }
+
+    /**
+     *  Check for availability of Tomcat.
+     *
+     *  @param content List a possible error message gets appended to.
+     */
+    boolean haveTomcat(content) {
+        def result = (controller.tomcat.agent != null)
+        if (!result) {
+            content << ''
+            content << alert('No Tomcat container found in remote JVM!')
+        }
+        return result
+    }
 }
 

@@ -18,6 +18,7 @@
 package de.web.tools.jagger.console;
 
 import javax.management.JMException;
+import javax.management.AttributeNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,7 +56,6 @@ class TerminalController extends Thread {
 
     // activate debugging features (like not catching exceptions into
     // displayed error messages)
-    // XXX make configurable
     Boolean DEBUG = false
 
     // size of the terminal (for the panels)
@@ -272,6 +272,16 @@ class TerminalController extends Thread {
         try {
             // try to connect
             new_agent.openConnection()
+
+            // switch facades to new agent
+            jvm.agent = new_agent
+
+            // XXX probably should make this happen lazily, when the panel needs it
+            try {
+                tomcat.agent = new_agent
+            } catch (InstanceNotFoundException) {
+                tomcat.agent = null
+            }
         } catch (SecurityException ex) {
             log.error("'${config.props.u}' is not authorized for ${serviceUrl}", ex)
             if (DEBUG) { killed = true; throw ex }
@@ -284,17 +294,13 @@ class TerminalController extends Thread {
             errorString = ex as String
         }
 
-        if (errorString != null) {
+        if (errorString == null) {
+            // activate the new agent
+            agent = new_agent
+        } else {
             new_agent = null
             errorMessage = errorString.split(': ')
             view.clear()
-        } else {
-            // switch facades to new agent
-            jvm.agent = new_agent
-            tomcat.agent = new_agent
-
-            // activate the new agent
-            agent = new_agent
         }
     }
 
@@ -378,6 +384,9 @@ class TerminalController extends Thread {
      *  Main method of the controller thread.
      */
     void run() {
+        // XXX this data structure is ridiculous... and works for now. ;)
+        DEBUG = Boolean.valueOf(config.props.defaults.getProperty('jagger.debug', 'false'))
+    
         // get panel configuration from spring and load panel classes
         config.context.getBean('panels').each { key, clazz ->
             panels[key] = this.getClass().forName(clazz, true, this.getClass().getClassLoader())

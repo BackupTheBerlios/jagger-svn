@@ -94,7 +94,7 @@ class CLI {
         def defaults = readDefaults()
 
         // collect options, use default if not given on cmd line
-        config = [:]
+        config = [defaults: defaults]
         [
             // list of option names and property names to check
             ns: 'jagger.host',
