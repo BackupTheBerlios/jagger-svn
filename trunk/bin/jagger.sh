@@ -19,6 +19,9 @@
 # if you really like to hit RETURN often, change to false
 RAW=true
 
+# make our own JMX agent available? (used for testing)
+JMX_REMOTE_PORT=$(grep jmx.remote.port= jagger.properties 2>/dev/null | sed -e 's/jmx.remote.port=//g')
+
 if test -z $GROOVY_HOME; then
     echo >&2 "You must set GROOVY_HOME!"
     exit 1 
@@ -50,6 +53,12 @@ JAVA_OPTS="$JAVA_OPTS -Dproject.version=@project.version@"
 JAVA_OPTS="$JAVA_OPTS -Dproject.home=$SCRIPTROOT"
 JAVA_OPTS="$JAVA_OPTS -Dterminal.rows=$(tput lines)"
 JAVA_OPTS="$JAVA_OPTS -Dterminal.cols=$(tput cols)"
+
+if test -n $JMX_REMOTE_PORT; then
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=$JMX_REMOTE_PORT"
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
+fi
 
 if $RAW; then
     SAVED_MODES=$(stty -g)
