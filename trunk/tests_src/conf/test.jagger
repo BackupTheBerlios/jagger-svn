@@ -1,0 +1,21 @@
+// Sample JMX model
+
+include 'testinc.jagger'
+
+defaultPort = 28111
+
+host 'loadbalancer'
+
+cluster('myapplication') {
+    cluster('frontend') {
+        defaultPort = 10111
+        host('ernie', 'bert')
+        defaultPort = 42111
+        host('lxmyfe%02d', 1..3)
+    }
+    cluster('backend') {
+        host('lxmybe01')
+        host(lxmybe02:20111)
+    }
+}
+
