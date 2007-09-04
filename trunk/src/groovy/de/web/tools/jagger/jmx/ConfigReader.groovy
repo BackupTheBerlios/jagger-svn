@@ -48,8 +48,13 @@ class JmxInstance {
 
 /**
  *  A single cluster.
+ *
+ *  This is modelled after the composite pattern, a cluster can contain either
+ *  other clusters or JMXInstances.
  */
 class JmxCluster {
+    private final INDENT = '\n    '
+
     // the model we're part of
     def model
 
@@ -76,10 +81,12 @@ class JmxCluster {
     }
 
     def toString() {
+        // append all children's representation, indenting them by one level
         def members = children
             .inject([]) { r, c -> r + c.toString().tokenize('\n') }
-            .join('\n    ')
-        return "Cluster '$name'\n    $members"
+            .join(INDENT)
+
+        return "Cluster '$name'$INDENT$members"
     }
 }
 
@@ -124,7 +131,7 @@ class JmxConfigReader {
 
 
     /**
-     *  XXX TODO!
+     *  Initializes reader state before parsing a new config file.
      */
     private void init() {
         binding = new Binding()
@@ -144,11 +151,13 @@ class JmxConfigReader {
     }
 
     /**
-     *  XXX TODO!
+     *  Saves parts of the reader state before entering a closure, so it can
+     *  be restored later.
      *
-     *  @param 
+     *  @return State object.
      */
     private getState() {
+        // save certain keys of the binding in a hashmap
         ['defaultPort'].inject([:]) { state, key ->
             state[key] = binding."$key"; state
         }
@@ -156,11 +165,11 @@ class JmxConfigReader {
 
 
     /**
-     *  XXX TODO!
+     *  Restores saved reader state.
      *
-     *  @param 
+     *  @param state State object as returned by getState().
      */
-    private setState(Map state) {
+    private setState(state) {
         state.each { k, v ->
             binding."$k" = v
         }
@@ -169,13 +178,16 @@ class JmxConfigReader {
 
 
     /**
-     *  XXX TODO!
+     *  Implements the "cluster" verb.
      *
-     *  @param 
+     *  @param name Name of the cluster.
+     *  @param clusterDef Definition of the cluster content.
      */
     private void doCluster(String name, Closure clusterDef) {
+        // create new cluster and push it on the stack
         clusterStack.add(new JmxCluster(binding.model, clusterStack[-1], name))
 
+        // execute cluster definition, with local scoping as defined by "state"
         def savedState = state
         try {
             clusterDef()
@@ -183,18 +195,20 @@ class JmxConfigReader {
             state = savedState
         }
 
+        // do not allow empty clusters
         if (!(clusterStack.pop().children)) {
             throw new IllegalArgumentException("The member list for cluster '$name' is empty!")
         }
     }
     private void doCluster(String name) {
+        // prevent cluster verbs without a closure following them
         throw new IllegalArgumentException("You didn't define any members for cluster '$name'!")
     }
 
     /**
-     *  XXX TODO!
+     *  Implements the "host" verb with a list of names.
      *
-     *  @param 
+     *  @param names List of hostnames, using the default port.
      */
     private void doHost(String[] names) {
         assert binding.defaultPort != null, "No default port defined"
@@ -202,11 +216,23 @@ class JmxConfigReader {
             new JmxInstance(clusterStack[-1], it, binding.defaultPort)
         }
     }
+    /**
+     *  Implements the "host" verb with a list of "host:port" arguments.
+     *
+     *  @param params Named parameters, interpreted as a "host:port" list.
+     */
     private void doHost(Map params) {
         params.each { hostname, port ->
             new JmxInstance(clusterStack[-1], hostname, port)
         }
     }
+    /**
+     *  Implements the "host" verb with a template and numbering range,
+     *  using the default port.
+     *
+     *  @param templ Naming template, e.g. 'myhost%02d'.
+     *  @param range Numbers to use.
+     */
     private void doHost(String templ, IntRange range) {
         assert binding.defaultPort != null, "No default port defined"
         range.each {
@@ -215,7 +241,7 @@ class JmxConfigReader {
     }
 
     /**
-     *  Implementation of the "include" directive.
+     *  Implements the "include" verb.
      *
      *  This tries to resolve the given path in the following order: <ol>
      *    <li>as given, absolute or relative to the cwd</li>
@@ -223,15 +249,19 @@ class JmxConfigReader {
      *    <li>as a classpath resource</li>
      *  </ol>
      *
-     *  @param Path to the script to include.
+     *  @param scriptPath Path to the script to include.
      */
     private void doInclude(scriptPath) {
         log.debug("Including $scriptPath...")
 
         def resolved = scriptPath as File
         if (!resolved.isAbsolute()) {
-            if (!resolved.exists()) resolved = new File((loadedPaths[-1] as File).parent, scriptPath)
             if (!resolved.exists()) {
+                // try relative to including script
+                resolved = new File((loadedPaths[-1] as File).parent, scriptPath)
+            }
+            if (!resolved.exists()) {
+                // try to get a classpath resource
                 def resource = getClass().classLoader.getResource(scriptPath)
                 if (resource) {
                     assert resource.protocol == 'file', "Included resource '$resource' not a file"
@@ -240,18 +270,21 @@ class JmxConfigReader {
             }
         }
 
+        // unable to resolve the given name?
         if (!resolved.exists()) {
             throw new FileNotFoundException("Can't find '${scriptPath}' for inclusion!")
         }
 
+        // execute the script by a recursive call
         execScript(resolved)
     }
     private void doInclude() {
+        // catch common error with a nice message
         throw new IllegalArgumentException('You must define an include filename!')
     }
 
     /**
-     *  Load and execute a script or include.
+     *  Loads and executes a script or include.
      *
      *  @param script String or File object with the script's filename.
      */
@@ -261,10 +294,13 @@ class JmxConfigReader {
         def scriptText = script.text
         def className = script.absolutePath.replaceAll('[^a-zA-Z0-9]', '_')
 
+        // prevent recursive includes
         if (loadedPaths.contains(script.absolutePath)) {
             throw new StackOverflowError("Recursive inclusion of '${script.name}' from '${(loadedPaths[-1] as File).name}'")
         }
 
+        // closure that tries to drop excessive information from exceptions thrown
+        // while executing the script 
         def handleException = { ex ->
             def trace = ex.stackTrace
                 .findAll { it.fileName == className }
@@ -277,6 +313,7 @@ class JmxConfigReader {
             }
         }
 
+        // execute script or include
         loadedPaths.add(script.absolutePath)
         try {
             groovyShell.evaluate(scriptText, className)
@@ -303,5 +340,5 @@ class JmxConfigReader {
 
 }
 
-def cr = new JmxConfigReader(); def model = cr.loadModel('tests_src/conf/test.jagger'); println model.dump(); println model.toString()
+def cr = new JmxConfigReader(); def model = cr.loadModel('tests_src/conf/test.jagger'); println '~'*78; println model.dump(); println model.toString()
 
