@@ -110,13 +110,7 @@ class TerminalController extends Thread {
      *
      *  @return Fully qualified connection target.
      */
-    def getCurrentHost() {
-        def result = hosts[currentHostIdx]
-        if (!result.contains(':')) {
-            result = "${result}:${config.props.p}"
-        }
-        return result
-    }
+    def getCurrentHost() { hosts[currentHostIdx] }
 
     /**
      *  Sets the current panel in a thread-safe way.
@@ -262,11 +256,7 @@ class TerminalController extends Thread {
         currentHostIdx = hostidx
 
         // create new connection factory
-        def serviceUrl = currentHost
-        if (!currentHost.startsWith('service:jmx:')) {
-            serviceUrl = "service:jmx:rmi:///jndi/rmi://${currentHost}/jmxrmi"
-        }
-        def new_agent = new JMXAgentFacade(url: serviceUrl, username: config.props.u, password: config.props.w)
+        def new_agent = new JMXAgentFacade(url: currentHost, username: config.props.u, password: config.props.w)
 
         def errorString = null
         try {
@@ -283,13 +273,13 @@ class TerminalController extends Thread {
                 tomcat.agent = null
             }
         } catch (SecurityException ex) {
-            log.error("'${config.props.u}' is not authorized for ${serviceUrl}", ex)
+            log.error("'${config.props.u}' is not authorized for ${new_agent.url}", ex)
             if (DEBUG) { killed = true; throw ex }
             errorString = ex as String
         } catch (ThreadDeath td) {
             throw td
         } catch (Throwable ex) { // catch, log and show
-            log.error("Can't connect to ${serviceUrl}", ex)
+            log.error("Can't connect to ${new_agent.url}", ex)
             if (DEBUG) { killed = true; throw ex }
             errorString = ex as String
         }

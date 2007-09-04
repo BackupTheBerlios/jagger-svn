@@ -23,6 +23,9 @@ import org.apache.commons.logging.LogFactory;
 import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.util.Config;
 
+import de.web.tools.jagger.jmx.JvmFacade;
+import de.web.tools.jagger.jmx.JMXAgentFacade;
+
 
 /**
  *  Command line interface to the JMX text console.
@@ -76,6 +79,7 @@ class CLI {
         cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
         cli.u(longOpt: 'username', args: 1, argName: 'USER',    'JMX username.')
         cli.w(longOpt: 'password', args: 1, argName: 'PWD',     'JMX password.')
+        cli.V(longOpt: 'dump-versions', args: 1, argName: 'FILE', 'Dump version information to FILE.')
     }    
 
 
@@ -147,6 +151,13 @@ class CLI {
             if (!(portno in 1..65535)) return "Port number not in range 1..65535"
         }
 
+        // qualify hostnames without port
+        config.ns.eachWithIndex { host, idx ->
+            if (!host.contains(':')) {
+                config.ns[idx] = "${host}:${config.p}"
+            }
+        }
+
         // decode base64 password, if given in that format
         if (config.w.startsWith('b64:')) {
             config.w = new String(config.w[4..-1].decodeBase64())
@@ -168,13 +179,6 @@ class CLI {
     private mainloop(cli, options) {
         // log proper startup
         log.info("Jagger startup initiated by ${System.getProperty('user.name')}")
-
-        // load merged config
-        def configError = setConfig(cli, options)
-        if (configError != null) {
-            println("Configuration error: ${configError}")
-            return 1
-        }
 
         // create terminal controller and start it
         def configuration = new Config(props: config)
@@ -244,6 +248,73 @@ class CLI {
 
 
     /**
+     *  Execute a closure for each host given by the user, calling it
+     *  with an initialized JvmFacade object for that host.
+     *
+     *  @param code The code to execute per host.
+     */
+    private void iterateHosts(code) {
+        def jvm = new JvmFacade()
+
+        config.ns.each { host ->
+            def agent = new JMXAgentFacade(url: host, username: config.u, password: config.w)
+            agent.openConnection()
+            jvm.agent = agent
+
+            code(jvm)
+        }
+    }
+
+
+    /**
+     *  Dump version information for all hosts to a property file.
+     */
+    private dumpVersions(filename) {
+        def versionInfo = new Properties()
+        def outputFile = new File(filename)
+
+        // check output file before doing all the work for nothing
+        if (!outputFile.absoluteFile.parentFile.canWrite()) {
+            println("FATAL: Can't write to $outputFile")
+            return 1
+        }
+        
+        iterateHosts { jvm ->
+            println "Connecting to ${jvm.agent.url}..."
+        
+            def stem = "host.${jvm.agent.url.replace(':','.port.')}"
+            jvm.versions.each { k, v ->
+                versionInfo.setProperty("$stem.$k", v)
+            }
+            jvm.components.each {
+                def componentStem = "$stem.${it.name}"
+                it.each { k, v ->
+                    if (k != 'name') {
+                        versionInfo.setProperty("$componentStem.$k", v)
+                    }
+                }
+            }
+        }
+
+        def stream
+        try {
+            stream = outputFile.newOutputStream()
+        } catch (FileNotFoundException ex) {
+            println("FATAL: Can't open $outputFile - ${ex.message}")
+            return 1
+        }
+
+        try {
+            versionInfo.store(stream, "Version infomation")
+        } finally {
+            stream.close()
+        }
+        println "Wrote ${versionInfo.size()} properties to $outputFile"
+        return 0
+    }
+
+
+    /**
      *  Process command line options and start mainloop.
      *
      *  @param args command line argument array
@@ -280,6 +351,17 @@ class CLI {
         if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
         if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
         if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
+
+        // load merged config
+        def configError = setConfig(cli, options)
+        if (configError != null) {
+            println("Configuration error: ${configError}")
+            return 1
+        }
+
+        if (options.V) {
+            return dumpVersions(options.V)
+        }
 
         // get things going
         return mainloop(cli, options)

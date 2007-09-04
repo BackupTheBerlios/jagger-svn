@@ -58,9 +58,15 @@ class JMXAgentFacade {
                     [this.username, this.password] as String[]
                 ]
             }
-            
+
+            // if necessary, make full JMX URL from "host:port"
+            def serviceUrl = this.url
+            if (!serviceUrl.startsWith('service:jmx:')) {
+                serviceUrl = "service:jmx:rmi:///jndi/rmi://${serviceUrl}/jmxrmi"
+            }
+
             // create connection
-            def connector = JMXConnectorFactory.connect(new JMXServiceURL(this.url), jmxEnv)
+            def connector = JMXConnectorFactory.connect(new JMXServiceURL(serviceUrl), jmxEnv)
             jmxConnection = connector.mBeanServerConnection
         }
 
