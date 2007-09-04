@@ -54,7 +54,7 @@ JAVA_OPTS="$JAVA_OPTS -Dproject.home=$SCRIPTROOT"
 JAVA_OPTS="$JAVA_OPTS -Dterminal.rows=$(tput lines)"
 JAVA_OPTS="$JAVA_OPTS -Dterminal.cols=$(tput cols)"
 
-if test -n $JMX_REMOTE_PORT; then
+if test $JMX_REMOTE_PORT; then
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=$JMX_REMOTE_PORT"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
