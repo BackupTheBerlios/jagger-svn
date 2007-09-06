@@ -20,5 +20,8 @@ cluster('myapplication') {
 }
 
 mbean threading: 'java.lang:type=Threading',
-      memory: 'java.lang:type=Memory'
-//beanGroup 
+      memory: 'java.lang:type=Memory',
+      requests: 'Catalina:type=GlobalRequestProcessor,name=*'
+
+println "end"
+

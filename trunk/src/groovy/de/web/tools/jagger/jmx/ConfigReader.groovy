@@ -93,7 +93,7 @@ class JmxCluster {
 
 
 /**
- *  A named MBean.
+ *  Base class for named MBeans.
  */
 class JmxMBean {
     // name
@@ -106,24 +106,75 @@ class JmxMBean {
     def model
 
 
-    public JmxMBean(model, name, objectName) {
+    protected JmxMBean(model, name, objectName) {
         if (model.mbeans.containsKey(name)) {
             throw new IllegalArgumentException("MBean with name '$name' already defined!")
         }
 
         this.model = model
         this.name = name
-        try {
-            this.objectName = objectName as ObjectName
-        } catch (GroovyCastException) {
-            this.objectName = new ObjectName(objectName)
-        }
+        this.objectName = objectName
 
         model.mbeans[name] = this
     }
 
     def toString() {
         "MBean $name = '$objectName'"
+    }
+
+    static JmxMBean create(model, name, objectName) {
+        def jmxObjectName
+        try {
+            jmxObjectName = objectName as ObjectName
+        } catch (GroovyCastException) {
+            jmxObjectName = new ObjectName(objectName)
+        }
+
+        if (jmxObjectName.isPropertyPattern()) {
+            return new JmxMBeanGroup(model, name, jmxObjectName)
+        } else {
+            return new JmxSimpleMBean(model, name, jmxObjectName)
+        }
+    }
+}
+
+
+/**
+ *  Simple (scalar) MBean.
+ */
+class JmxSimpleMBean extends JmxMBean {
+    protected JmxSimpleMBean(model, name, objectName) {
+        super(model, name, objectName)
+    }
+}
+
+
+/**
+ *  A group of releated MBeans.
+ */
+class JmxMBeanGroup extends JmxMBean {
+    // the primary keys identifying each group bean
+    def keys = []
+
+
+    protected JmxMBeanGroup(model, name, objectName) {
+        super(model, name, objectName)
+
+        // this might seem overly complex, but real-life experience shows
+        // that queries for 'key=*' don't work, just ones with a trailing ',*'
+        def literals = []        
+        objectName.keyPropertyList.each { key, val ->
+            if (val == '*') {
+                keys << key
+            } else {
+                literals << "${ObjectName.quote(key)}=${ObjectName.quote(val)}"
+            }
+        }
+        this.objectName = new ObjectName("${ObjectName.quote(objectName.domain)}:${literals.join(',')},*")
+    }
+
+    def toString() {
+        "${super.toString()} keys=${keys}"
     }
 }
 
@@ -300,7 +351,7 @@ class JmxConfigReader {
      */
     private void doMbean(Map params) {
         params.each { name, objectName ->
-            new JmxMBean(model, name, objectName)
+            JmxMBean.create(model, name, objectName)
         }
     }
 
