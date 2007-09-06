@@ -17,6 +17,7 @@
 
 package de.web.tools.jagger.jmx;
 
+import javax.management.ObjectName;
 import org.apache.commons.logging.LogFactory;
 
 
@@ -92,17 +93,62 @@ class JmxCluster {
 
 
 /**
+ *  A named MBean.
+ */
+class JmxMBean {
+    // name
+    String name
+
+    // name
+    ObjectName objectName
+
+    // the model we're part of
+    def model
+
+
+    public JmxMBean(model, name, objectName) {
+        if (model.mbeans.containsKey(name)) {
+            throw new IllegalArgumentException("MBean with name '$name' already defined!")
+        }
+
+        this.model = model
+        this.name = name
+        try {
+            this.objectName = objectName as ObjectName
+        } catch (GroovyCastException) {
+            this.objectName = new ObjectName(objectName)
+        }
+
+        model.mbeans[name] = this
+    }
+
+    def toString() {
+        "MBean $name = '$objectName'"
+    }
+}
+
+
+/**
  *  Complete JMX data model.
  */
 class JmxModel {
     // map of clusters in this model
     final clusters = [:]
 
+    // map of mbeans in this model
+    final mbeans = [:]
+
     // root cluster
     final rootCluster = new JmxCluster(this, null, '')
 
     def toString() {
-        rootCluster.toString()
+        def result = [rootCluster.toString()]
+
+        mbeans.each { key, bean ->
+            result << bean.toString()
+        }
+
+        return result.join('\n')
     }
 }
 
@@ -113,6 +159,13 @@ class JmxModel {
 class JmxConfigReader {
     //private static log = LogFactory.getLog(JmxConfigReader.class)
     private static log = new Expando(debug: System.out.&println, info: System.out.&println)
+
+    // known verbs of the DSL
+    private final DSL_VERBS = [
+        'include',
+        'cluster', 'host',
+        'mbean',
+    ]
 
     // the binding for the configuration file's outer scope
     private binding
@@ -145,7 +198,7 @@ class JmxConfigReader {
         binding.defaultPort = null
 
         // bind methods (include => doInclude, etc.)
-        ['cluster', 'host', 'include'].each {
+        DSL_VERBS.each {
             binding."$it" = this.&"do${it[0].toUpperCase()}${it[1..-1]}"
         }
     }
@@ -241,6 +294,17 @@ class JmxConfigReader {
     }
 
     /**
+     *  Implements the "mbean" verb.
+     *
+     *  @param params Named parameters, interpreted as a "name:objectName" list.
+     */
+    private void doMbean(Map params) {
+        params.each { name, objectName ->
+            new JmxMBean(model, name, objectName)
+        }
+    }
+
+    /**
      *  Implements the "include" verb.
      *
      *  This tries to resolve the given path in the following order: <ol>
@@ -301,13 +365,14 @@ class JmxConfigReader {
 
         // closure that tries to drop excessive information from exceptions thrown
         // while executing the script 
-        def handleException = { ex ->
+        def handleException = { ex, msg ->
+            throw ex
             def trace = ex.stackTrace
                 .findAll { it.fileName == className }
                 .collect { "${script.name}, line ${it.lineNumber}:" }
             if (trace) {
-                throw new ScriptException(trace[0] +
-                " ${ex.getClass().name}: ${ex.message.replace(className, script.name)}", ex)
+                if (msg == null) msg = "${ex.getClass().name}: ${ex.message.replace(className, script.name)}"
+                throw new ScriptException("${trace[0]} $msg", ex)
             } else {
                 throw ex
             }
@@ -317,10 +382,29 @@ class JmxConfigReader {
         loadedPaths.add(script.absolutePath)
         try {
             groovyShell.evaluate(scriptText, className)
+        } catch (MissingMethodException ex) {
+            if (ex.type.name == className) {
+                def msg = null
+                if (!DSL_VERBS.contains(ex.method)) {
+                    msg = "Unknown configuration directive '${ex.method}' used!"
+                }
+                handleException(ex, msg)
+            } else if (ex.type.name == this.getClass().name) {
+                if (ex.method.startsWith('do')) {
+                    def verb = ex.method[2..-1].toLowerCase()
+                    handleException(ex, "Bad parameters for configuration directive '$verb': ${ex.message.replace(className, script.name)}")
+                } else {
+                    // internal (programming) error
+                    throw ex
+                }
+            } else {
+                // internal (programming) error
+                throw ex
+            }
         } catch (AssertionError ex) {
-            handleException(ex)
+            handleException(ex, null)
         } catch (Exception ex) {
-            handleException(ex)
+            handleException(ex, null)
         } finally {
             loadedPaths.pop()
         }
