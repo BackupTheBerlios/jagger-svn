@@ -23,5 +23,11 @@ mbean threading: 'java.lang:type=Threading',
       memory: 'java.lang:type=Memory',
       requests: 'Catalina:type=GlobalRequestProcessor,name=*'
 
+beans = [
+    tomcatState: [
+        'requests': { requests.requestCount },
+    ]
+]
+
 println "end"
 

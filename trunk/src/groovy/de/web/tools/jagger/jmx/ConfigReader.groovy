@@ -192,12 +192,17 @@ class JmxModel {
     // root cluster
     final rootCluster = new JmxCluster(this, null, '')
 
+    // definition of aggregation beans
+    def beans
+
     def toString() {
         def result = [rootCluster.toString()]
 
         mbeans.each { key, bean ->
             result << bean.toString()
         }
+
+        result << beans.inspect()
 
         return result.join('\n')
     }
@@ -470,10 +475,11 @@ class JmxConfigReader {
     public JmxModel loadModel(script) {
         init()
         execScript(script)
+        model.beans = binding.beans
         return model
     }
 
 }
 
-def cr = new JmxConfigReader(); def model = cr.loadModel('tests_src/conf/test.jagger'); println '~'*78; println model.dump(); println model.toString()
+def cr = new JmxConfigReader(); def model = cr.loadModel('tests_src/conf/test.jagger'); println '~'*78; println model.toString()
 
