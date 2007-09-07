@@ -1,4 +1,4 @@
-/*  jagger - Comsole Mode Command Line Interface
+/*  jagger - Console Mode Command Line Interface
 
     Copyright (c) 2007 by 1&1 Internet AG
 
@@ -255,7 +255,7 @@ class Console extends CLISupport {
         }
 
         // log proper startup
-        log.info("Jagger startup initiated by ${System.getProperty('user.name')}")
+        log.info("Jagger console startup initiated by ${System.getProperty('user.name')}")
 
         // create terminal controller and start it
         def configuration = new Config(props: config)
@@ -318,7 +318,7 @@ class Console extends CLISupport {
         terminal.join(JOIN_TIMEOUT)
 
         // log proper shutdown
-        log.info("Jagger shutdown initiated by ${System.getProperty('user.name')}")
+        log.info("Jagger console shutdown initiated by ${System.getProperty('user.name')}")
 
         return 0
     }

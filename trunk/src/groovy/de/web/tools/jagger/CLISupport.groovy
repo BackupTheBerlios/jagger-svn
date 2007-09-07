@@ -97,17 +97,6 @@ abstract class CLISupport {
         if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
         if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
 
-        // load merged config
-        def configError = setConfig(cli, options)
-        if (configError != null) {
-            println("Configuration error: ${configError}")
-            return 1
-        }
-
-        if (options.V) {
-            return dumpVersions(options.V)
-        }
-
         // get things going
         return mainloop(cli, options)
     }
