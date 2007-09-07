@@ -1,4 +1,4 @@
-/*  jagger - Command Line Interface
+/*  jagger - Comsole Mode Command Line Interface
 
     Copyright (c) 2007 by 1&1 Internet AG
 
@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id$
+    $Id: CLI.groovy 68 2007-09-04 09:35:41Z jhermann $
 */
 
 package de.web.tools.jagger;
@@ -20,7 +20,6 @@ package de.web.tools.jagger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import de.web.tools.jagger.util.License;
 import de.web.tools.jagger.util.Config;
 
 import de.web.tools.jagger.jmx.JvmFacade;
@@ -29,14 +28,13 @@ import de.web.tools.jagger.jmx.JMXAgentFacade;
 
 /**
  *  Command line interface to the JMX text console.
- *  (and later, possibly to the demon via a mode switch).
  *
  *  This reads the command line options, merges them with
  *  the config files and starts the terminal controller with
  *  the result.
  */
-class CLI {
-    private static Log log = LogFactory.getLog(CLI.class)
+class Console extends CLISupport {
+    private static Log log = LogFactory.getLog(Console.class)
 
     /* Timeout for thread joining on shutdown. */
     static final JOIN_TIMEOUT = 10000
@@ -49,9 +47,10 @@ class CLI {
 
 
     /**
-     *  CLI instances are only created by main().
+     *  Console instances are only created by main().
      */
-    private CLI() {}
+    private Console() {}
+
 
     /**
      *  Read option defaults from properties file, if one is found.
@@ -73,7 +72,7 @@ class CLI {
      *
      *  @param cli CLI builder instance
      */
-    private void addOptions(cli) {
+    protected void addOptions(cli) {
         cli.n(longOpt: 'hostname', args: 9, argName: 'DOMAIN,...', 'Comma-separated list of hostnames or service URLs.',
               valueSeparator: ',' as char)
         cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
@@ -169,6 +168,73 @@ class CLI {
 
 
     /**
+     *  Execute a closure for each host given by the user, calling it
+     *  with an initialized JvmFacade object for that host.
+     *
+     *  @param code The code to execute per host.
+     */
+    private void iterateHosts(code) {
+        def jvm = new JvmFacade()
+
+        config.ns.each { host ->
+            def agent = new JMXAgentFacade(url: host, username: config.u, password: config.w)
+            agent.openConnection()
+            jvm.agent = agent
+
+            code(jvm)
+        }
+    }
+
+
+    /**
+     *  Dump version information for all hosts to a property file.
+     */
+    private dumpVersions(filename) {
+        def versionInfo = new Properties()
+        def outputFile = new File(filename)
+
+        // check output file before doing all the work for nothing
+        if (!outputFile.absoluteFile.parentFile.canWrite()) {
+            println("FATAL: Can't write to $outputFile")
+            return 1
+        }
+        
+        iterateHosts { jvm ->
+            println "Connecting to ${jvm.agent.url}..."
+        
+            def stem = "host.${jvm.agent.url.replace(':','.port.')}"
+            jvm.versions.each { k, v ->
+                versionInfo.setProperty("$stem.$k", v)
+            }
+            jvm.components.each {
+                def componentStem = "$stem.${it.name}"
+                it.each { k, v ->
+                    if (k != 'name') {
+                        versionInfo.setProperty("$componentStem.$k", v)
+                    }
+                }
+            }
+        }
+
+        def stream
+        try {
+            stream = outputFile.newOutputStream()
+        } catch (FileNotFoundException ex) {
+            println("FATAL: Can't open $outputFile - ${ex.message}")
+            return 1
+        }
+
+        try {
+            versionInfo.store(stream, "Version infomation")
+        } finally {
+            stream.close()
+        }
+        println "Wrote ${versionInfo.size()} properties to $outputFile"
+        return 0
+    }
+
+
+    /**
      *  Start everything up, coordinate the running threads and
      *  finally try to shut down cleanly.
      *
@@ -176,7 +242,18 @@ class CLI {
      *  @param options parsed options
      *  @return exit code
      */
-    private mainloop(cli, options) {
+    protected mainloop(cli, options) {
+        // load merged config
+        def configError = setConfig(cli, options)
+        if (configError != null) {
+            println("Configuration error: ${configError}")
+            return 1
+        }
+
+        if (options.V) {
+            return dumpVersions(options.V)
+        }
+
         // log proper startup
         log.info("Jagger startup initiated by ${System.getProperty('user.name')}")
 
@@ -248,135 +325,14 @@ class CLI {
 
 
     /**
-     *  Execute a closure for each host given by the user, calling it
-     *  with an initialized JvmFacade object for that host.
-     *
-     *  @param code The code to execute per host.
-     */
-    private void iterateHosts(code) {
-        def jvm = new JvmFacade()
-
-        config.ns.each { host ->
-            def agent = new JMXAgentFacade(url: host, username: config.u, password: config.w)
-            agent.openConnection()
-            jvm.agent = agent
-
-            code(jvm)
-        }
-    }
-
-
-    /**
-     *  Dump version information for all hosts to a property file.
-     */
-    private dumpVersions(filename) {
-        def versionInfo = new Properties()
-        def outputFile = new File(filename)
-
-        // check output file before doing all the work for nothing
-        if (!outputFile.absoluteFile.parentFile.canWrite()) {
-            println("FATAL: Can't write to $outputFile")
-            return 1
-        }
-        
-        iterateHosts { jvm ->
-            println "Connecting to ${jvm.agent.url}..."
-        
-            def stem = "host.${jvm.agent.url.replace(':','.port.')}"
-            jvm.versions.each { k, v ->
-                versionInfo.setProperty("$stem.$k", v)
-            }
-            jvm.components.each {
-                def componentStem = "$stem.${it.name}"
-                it.each { k, v ->
-                    if (k != 'name') {
-                        versionInfo.setProperty("$componentStem.$k", v)
-                    }
-                }
-            }
-        }
-
-        def stream
-        try {
-            stream = outputFile.newOutputStream()
-        } catch (FileNotFoundException ex) {
-            println("FATAL: Can't open $outputFile - ${ex.message}")
-            return 1
-        }
-
-        try {
-            versionInfo.store(stream, "Version infomation")
-        } finally {
-            stream.close()
-        }
-        println "Wrote ${versionInfo.size()} properties to $outputFile"
-        return 0
-    }
-
-
-    /**
-     *  Process command line options and start mainloop.
-     *
-     *  @param args command line argument array
-     *  @return exit code
-     */
-    private process(args) {
-        // describe common CLI options
-        def cli = new CliBuilder(
-            usage: "${License.APPNAME} [options]",
-            writer: new PrintWriter(System.out)
-        )
-        cli.h(longOpt: 'help', 'Show this help message.')
-        cli.v(longOpt: 'version', 'Show version information.')
-        cli.Y(longOpt: 'warranty', 'Show warranty information.')
-        cli.Z(longOpt: 'license', 'Show license information.')
-
-        // add tool specific options
-        addOptions(cli)
-
-        // parse options and do standard processing
-        def options = cli.parse(args)
-        if (options == null) {
-            println('Error in processing command line options.')
-            return 1
-        }
-        if (options.h) {
-            // why doesn't CliBuilder offer the "header" parameter?!
-            cli.formatter.printHelp(cli.writer, cli.formatter.defaultWidth,
-                cli.usage, License.COPYRIGHT + ' \u00A0\nOptions:', cli.options,
-                cli.formatter.defaultLeftPad, cli.formatter.defaultDescPad, '')
-            cli.writer.flush()
-            return 1
-        }
-        if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
-        if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
-        if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
-
-        // load merged config
-        def configError = setConfig(cli, options)
-        if (configError != null) {
-            println("Configuration error: ${configError}")
-            return 1
-        }
-
-        if (options.V) {
-            return dumpVersions(options.V)
-        }
-
-        // get things going
-        return mainloop(cli, options)
-    }
-
- 
-    /**
-     *  The jagger main.
+     *  The jagger console main.
      *
      *  @param args command line argument array
      *  @return exit code
      */
     public static main(args) {
         // delegate to instance of this class
-        return new CLI().process(args)
+        return new Console().process(args)
     }
 }
 

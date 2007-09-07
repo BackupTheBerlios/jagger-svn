@@ -67,7 +67,7 @@ if $RAW; then
 fi
 
 # start in subshell so stty reset is ensured
-( startGroovy @project.package@.CLI "$@" ) 
+( startGroovy @project.package@.Console "$@" ) 
 
 if $RAW; then
     stty $SAVED_MODES
