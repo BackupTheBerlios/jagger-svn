@@ -36,6 +36,11 @@ class JmxConfigReader {
         'mbean',
     ]
 
+    // binding names that should be local to a scope
+    private final LOCAL_STATE = [
+        'defaultPort', 'username', 'password',
+    ]
+
     // the binding for the configuration file's outer scope
     private binding
 
@@ -65,6 +70,8 @@ class JmxConfigReader {
         // bind objects
         binding.model = model
         binding.defaultPort = null
+        binding.username = null
+        binding.password = null
 
         // bind methods (include => doInclude, etc.)
         DSL_VERBS.each {
@@ -80,7 +87,7 @@ class JmxConfigReader {
      */
     private getState() {
         // save certain keys of the binding in a hashmap
-        ['defaultPort'].inject([:]) { state, key ->
+        LOCAL_STATE.inject([:]) { state, key ->
             state[key] = binding."$key"; state
         }
     }
@@ -135,7 +142,7 @@ class JmxConfigReader {
     private void doHost(String[] names) {
         assert binding.defaultPort != null, "No default port defined"
         names.each {
-            new JmxInstance(clusterStack[-1], it, binding.defaultPort)
+            copyCredentials(new JmxInstance(clusterStack[-1], it, binding.defaultPort))
         }
     }
     /**
@@ -145,7 +152,7 @@ class JmxConfigReader {
      */
     private void doHost(Map params) {
         params.each { hostname, port ->
-            new JmxInstance(clusterStack[-1], hostname, port)
+            copyCredentials(new JmxInstance(clusterStack[-1], hostname, port))
         }
     }
     /**
@@ -158,8 +165,12 @@ class JmxConfigReader {
     private void doHost(String templ, IntRange range) {
         assert binding.defaultPort != null, "No default port defined"
         range.each {
-            new JmxInstance(clusterStack[-1], sprintf(templ, it), binding.defaultPort)
+            copyCredentials(new JmxInstance(clusterStack[-1], sprintf(templ, it), binding.defaultPort))
         }
+    }
+    private void copyCredentials(instance) {
+        instance.username = binding.username
+        instance.password = binding.password
     }
 
     /**

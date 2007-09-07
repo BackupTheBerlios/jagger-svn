@@ -27,6 +27,12 @@ class JmxInstance {
     // agent URL
     String url
 
+    // username
+    String username
+
+    // password
+    String password
+
     // the cluster we belong to
     def cluster
 
@@ -39,6 +45,11 @@ class JmxInstance {
 
         cluster.children << this
     }
+
+    def getInstances() {
+        [this]
+    }
+
 
     def toString() {
         "Instance '$url'"
@@ -79,6 +90,12 @@ class JmxCluster {
         model.clusters[name] = this
         if (parent) parent.children << this
     }
+
+
+    def getInstances() {
+        children.inject([]) { result, child -> result + child.getInstances() }
+    }
+
 
     def toString() {
         // append all children's representation, indenting them by one level
@@ -145,6 +162,11 @@ class JmxSimpleMBean extends JmxMBean {
     protected JmxSimpleMBean(model, name, objectName) {
         super(model, name, objectName)
     }
+
+
+    def lookupBeans(agent) {
+        [agent.getBean(objectName)]
+    }
 }
 
 
@@ -161,19 +183,32 @@ class JmxMBeanGroup extends JmxMBean {
 
         // this might seem overly complex, but real-life experience shows
         // that queries for 'key=*' don't work, just ones with a trailing ',*'
-        def literals = []        
+        def literals = []
+        //def quote = ObjectName.&quote
+        def quote = { it }
         objectName.keyPropertyList.each { key, val ->
             if (val == '*') {
                 keys << key
             } else {
-                literals << "${ObjectName.quote(key)}=${ObjectName.quote(val)}"
+                literals << "${quote(key)}=${quote(val)}"
             }
         }
-        this.objectName = new ObjectName("${ObjectName.quote(objectName.domain)}:${literals.join(',')},*")
+        this.objectName = new ObjectName("${quote(objectName.domain)}:${literals.join(',')},*")
     }
 
     def toString() {
         "${super.toString()} keys=${keys}"
+    }
+
+
+    def lookupBeans(agent) {
+        def result = []
+        //println "Query $objectName"
+        agent.queryBeans(objectName) { name, bean ->
+            //println name
+            result << bean
+        }
+        result
     }
 }
 

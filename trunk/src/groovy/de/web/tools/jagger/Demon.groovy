@@ -21,46 +21,132 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.JmxConfigReader;
+import de.web.tools.jagger.jmx.JMXAgentFacade;
 
 
-class MBeanAccessor {
+class AttributeAccessor {
     def mbean
+    def property
 
-    public Object getProperty(final String property) {
-        //println "Accessing attribute $property of bean ${mbean.objectName}"
+    public toString() {
         return "$property@${mbean.objectName}"
     }    
 }
 
 
-class ModelDelegate {
-    def model
+class MBeanAccessor {
+    def context
+    def mbean
 
-    private doAggregation(accessor, aggregator) {
-        "${aggregator()}($accessor)"
+    public Object getProperty(final String property) {
+        new AttributeAccessor(mbean: mbean, property: property)
+    }    
+}
+
+
+class ModelDelegate {
+    def context
+
+    private doAggregation(name, accessor, aggregator) {
+        def values = context.pollInstances(accessor)
+
+        "${values.inject(0, aggregator)} = $name($values)"
     }
 
     public Object getProperty(final String property) {
         //println "Accessing bean $property"
-        return new MBeanAccessor(mbean: model.mbeans[property])
+        return new MBeanAccessor(context: context, mbean: context.model.mbeans[property])
     }
 
     public sum(accessor) {
-        doAggregation(accessor) { "sum" }
+        doAggregation("sum", accessor) { a, b -> a + b }
     }
 
     public avg(accessor) {
-        doAggregation(accessor) { "avg" }
+        // XXX TODO: does not work that way!
+        doAggregation("avg", accessor) { a, b -> a + b }
     }
 
     public min(accessor) {
-        doAggregation(accessor) { "min" }
+        doAggregation("min", accessor) { a, b -> [a, b].min() }
     }
 
     public max(accessor) {
-        doAggregation(accessor) { "max" }
+        doAggregation("max", accessor) { a, b -> [a, b].max() }
     }
 }
+
+
+class ExecutionContext {
+    private agentCache = [:]
+    private beanCache = [:]
+
+    Boolean tracing = true
+    
+    def model
+
+    public trace(messageGenerator) {
+        if (tracing) {
+            println "TRACE: ${messageGenerator()}"
+        }
+    }
+
+
+    public getAgent(instance) {
+        if (!agentCache.containsKey(instance.url)) {
+            trace{"Connecting to ${instance.toString()}..."}
+            def agent = new JMXAgentFacade(url: instance.url, username: instance.username, password: instance.password)
+            agent.openConnection()
+            agentCache[instance.url] = agent
+        }
+
+        return agentCache[instance.url]
+    }
+
+
+    public pollInstances(accessor) {
+        model.rootCluster.instances.inject([]) { result, instance ->
+            def agent = getAgent(instance)
+            if (!beanCache.containsKey(agent.url)) {
+                beanCache[agent.url] = [:]
+            }
+            
+            def cachedBeans = beanCache[agent.url]
+            if (!cachedBeans.containsKey(accessor.mbean.name)) {
+                cachedBeans[accessor.mbean.name] = accessor.mbean.lookupBeans(agent)
+                def names = cachedBeans[accessor.mbean.name].collect { it.name().canonicalName }
+                trace {
+                    "Lookup for '$accessor.mbean.name' returned ${names.join(', ')}"
+                }
+            }
+
+            cachedBeans[accessor.mbean.name].each {
+                def val = it.getProperty(accessor.property)
+                //trace { "${instance.url}:${accessor.toString()} = $val" }
+                result << val
+            }
+
+            result
+        }
+    }
+}
+
+
+class Executor {
+    def model
+
+    public run() {
+        def context = new ExecutionContext(model: model)
+        model.beans.each { beanName, bean ->
+            bean.each { attributeName, closure ->
+                closure.delegate = new ModelDelegate(context: context)
+                closure.resolveStrategy = closure.DELEGATE_ONLY
+                println "$attributeName = ${closure()}"
+            }
+        }
+    }
+}
+
 
 
 /**
@@ -99,19 +185,20 @@ class Demon extends CLISupport {
         // log proper startup
         log.info("Jagger demon startup initiated by ${System.getProperty('user.name')}")
 
+        def args = options.arguments()
+        def configFilename = 'tests_src/conf/test.jagger'
+        if (args) {
+            configFilename = args[0]
+        }
+
         def cr = new JmxConfigReader()
-        def model = cr.loadModel('tests_src/conf/test.jagger')
+        def model = cr.loadModel(configFilename)
         println '~'*78
         println model.toString()
         println '~'*78
+        model.rootCluster.instances.each { println it.toString() }
 
-        model.beans.each { beanName, bean ->
-            bean.each { attributeName, closure ->
-                closure.delegate = new ModelDelegate(model: model)
-                closure.resolveStrategy = closure.DELEGATE_ONLY
-                println "$attributeName = ${closure()}"
-            }
-        }
+        new Executor(model: model).run()
 
         // log proper shutdown
         log.info("Jagger demon shutdown initiated by ${System.getProperty('user.name')}")
