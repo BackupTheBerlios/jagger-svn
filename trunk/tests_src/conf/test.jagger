@@ -25,8 +25,9 @@ mbean threading: 'java.lang:type=Threading',
 
 beans = [
     tomcatState: [
-        'requests': { requests.requestCount },
-    ]
+        'requests': { sum(requests.requestCount) },
+        'maxTime': { max(requests.maxTime) },
+    ],
 ]
 
 println "end"

@@ -23,6 +23,46 @@ import org.apache.commons.logging.LogFactory;
 import de.web.tools.jagger.jmx.JmxConfigReader;
 
 
+class MBeanAccessor {
+    def mbean
+
+    public Object getProperty(final String property) {
+        //println "Accessing attribute $property of bean ${mbean.objectName}"
+        return "$property@${mbean.objectName}"
+    }    
+}
+
+
+class ModelDelegate {
+    def model
+
+    private doAggregation(accessor, aggregator) {
+        "${aggregator()}($accessor)"
+    }
+
+    public Object getProperty(final String property) {
+        //println "Accessing bean $property"
+        return new MBeanAccessor(mbean: model.mbeans[property])
+    }
+
+    public sum(accessor) {
+        doAggregation(accessor) { "sum" }
+    }
+
+    public avg(accessor) {
+        doAggregation(accessor) { "avg" }
+    }
+
+    public min(accessor) {
+        doAggregation(accessor) { "min" }
+    }
+
+    public max(accessor) {
+        doAggregation(accessor) { "max" }
+    }
+}
+
+
 /**
  *  Command line interface to the JMX demon.
  */
@@ -63,6 +103,15 @@ class Demon extends CLISupport {
         def model = cr.loadModel('tests_src/conf/test.jagger')
         println '~'*78
         println model.toString()
+        println '~'*78
+
+        model.beans.each { beanName, bean ->
+            bean.each { attributeName, closure ->
+                closure.delegate = new ModelDelegate(model: model)
+                closure.resolveStrategy = closure.DELEGATE_ONLY
+                println "$attributeName = ${closure()}"
+            }
+        }
 
         // log proper shutdown
         log.info("Jagger demon shutdown initiated by ${System.getProperty('user.name')}")
