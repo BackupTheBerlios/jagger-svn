@@ -175,20 +175,21 @@ class JmxSimpleMBean extends JmxMBean {
  */
 class JmxMBeanGroup extends JmxMBean {
     // the primary keys identifying each group bean
-    def keys = []
+    def filters = [:]
 
 
     protected JmxMBeanGroup(model, name, objectName) {
         super(model, name, objectName)
 
         // this might seem overly complex, but real-life experience shows
-        // that queries for 'key=*' don't work, just ones with a trailing ',*'
+        // that queries for 'key=*' or 'key=prefix*' don't work, just ones
+        // with a trailing ',*'
         def literals = []
         //def quote = ObjectName.&quote
         def quote = { it }
         objectName.keyPropertyList.each { key, val ->
-            if (val == '*') {
-                keys << key
+            if (val.endsWith('*')) {
+                filters[key] = val[0..-2]
             } else {
                 literals << "${quote(key)}=${quote(val)}"
             }
@@ -197,7 +198,14 @@ class JmxMBeanGroup extends JmxMBean {
     }
 
     def toString() {
-        "${super.toString()} keys=${keys}"
+        "${super.toString()} filters=${filters}"
+    }
+
+
+    private Boolean passesFilter(objectName) {
+        null == filters.find {
+            !objectName.getKeyProperty(it.key).startsWith(it.value)
+        }
     }
 
 
@@ -206,7 +214,9 @@ class JmxMBeanGroup extends JmxMBean {
         //println "Query $objectName"
         agent.queryBeans(objectName) { name, bean ->
             //println name
-            result << bean
+            if (passesFilter(name)) {
+                result << bean
+            }
         }
         result
     }
