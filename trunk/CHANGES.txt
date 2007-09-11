@@ -2,8 +2,11 @@ jagger Changelog
 ================
 
 x xxx xxx xx 2007 Release 1.1
-- Added unit tests
+- Jagger now requires Groovy 1.1!
+- Added unit tests, fixed some bugs found by them
 - Made Tomcat and JSW optional (navel-gazing now possible)
+- New command line interface for demon mode (jagger-demon)
+- Implemented JMX model / aggregation DSL
 
 =============================================================================
 * Fri Jul 27 2007 Release 1.0
