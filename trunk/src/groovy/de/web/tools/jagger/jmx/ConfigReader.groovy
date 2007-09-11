@@ -33,7 +33,7 @@ class JmxConfigReader {
     private final DSL_VERBS = [
         'include',
         'cluster', 'host',
-        'mbean',
+        'remoteBean',
     ]
 
     // binding names that should be local to a scope
@@ -174,11 +174,11 @@ class JmxConfigReader {
     }
 
     /**
-     *  Implements the "mbean" verb.
+     *  Implements the "remoteBean" verb.
      *
      *  @param params Named parameters, interpreted as a "name:objectName" list.
      */
-    private void doMbean(Map params) {
+    private void doRemoteBean(Map params) {
         params.each { name, objectName ->
             JmxMBean.create(model, name, objectName)
         }
@@ -299,7 +299,7 @@ class JmxConfigReader {
     public JmxModel loadModel(script) {
         init()
         execScript(script)
-        model.beans = binding.beans
+        model.targetBeans = binding.targetBeans
         return model
     }
 

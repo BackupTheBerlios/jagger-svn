@@ -55,7 +55,7 @@ class ModelDelegate {
 
     public Object getProperty(final String property) {
         //println "Accessing bean $property"
-        return new MBeanAccessor(context: context, mbean: context.model.mbeans[property])
+        return new MBeanAccessor(context: context, mbean: context.model.remoteBeans[property])
     }
 
     public sum(accessor) {
@@ -137,7 +137,7 @@ class Executor {
 
     public run() {
         def context = new ExecutionContext(model: model)
-        model.beans.each { beanName, bean ->
+        model.targetBeans.each { beanName, bean ->
             bean.each { attributeName, closure ->
                 closure.delegate = new ModelDelegate(context: context)
                 closure.resolveStrategy = closure.DELEGATE_ONLY

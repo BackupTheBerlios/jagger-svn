@@ -37,6 +37,15 @@ class JmxInstance {
     def cluster
 
 
+    /**
+     *  Creates a JVM instance in the model.
+     *  The new instance is automatically weaved into the model.
+     *
+     *  @param cluster Cluster this instance is a member of.
+     *  @param hostname Hostname.
+     *  @param port Port of JMX RMI registry.
+     *  @throws AssertionError If port number not in range 1..65535
+     */
     public JmxInstance (cluster, hostname, port) {
         assert (1..65535).contains(port as Integer), "Illegal port number '${port}'" 
 
@@ -46,11 +55,21 @@ class JmxInstance {
         cluster.children << this
     }
 
+    /**
+     *  Returns a list of instances in this object.
+     *
+     *  @return List containig this one instance.
+     */
     def getInstances() {
         [this]
     }
 
 
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
     def toString() {
         "Instance '$url'"
     }
@@ -64,6 +83,7 @@ class JmxInstance {
  *  other clusters or JMXInstances.
  */
 class JmxCluster {
+    // indentation for toString()
     private final INDENT = '\n    '
 
     // the model we're part of
@@ -78,6 +98,16 @@ class JmxCluster {
     // what's in the cluster (instances and sub-clusters)
     def children = []
 
+
+    /**
+     *  Creates a cluster in the model.
+     *  The new cluster is automatically weaved into the model.
+     *
+     *  @param model Model containing the new cluster.
+     *  @param parent Parent cluster or null for root.
+     *  @param name Name of the new cluster.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
     public JmxCluster(model, parent, name) {
         if (model.clusters.containsKey(name)) {
             throw new IllegalArgumentException("Cluster with name '$name' already defined!")
@@ -91,12 +121,20 @@ class JmxCluster {
         if (parent) parent.children << this
     }
 
-
+    /**
+     *  Returns a list of instances in this object.
+     *
+     *  @return Recursively collected list of instances in this cluster.
+     */
     def getInstances() {
         children.inject([]) { result, child -> result + child.getInstances() }
     }
 
-
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
     def toString() {
         // append all children's representation, indenting them by one level
         def members = children
@@ -112,18 +150,26 @@ class JmxCluster {
  *  Base class for named MBeans.
  */
 class JmxMBean {
-    // name
+    // logical name
     String name
 
-    // name
+    // JMX object name
     ObjectName objectName
 
     // the model we're part of
     def model
 
 
+    /**
+     *  Create a new remote bean reference.
+     *
+     *  @param model Model containing the bean reference.
+     *  @param name Name of the new bean.
+     *  @param objectName Object name in the remote JVM.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
     protected JmxMBean(model, name, objectName) {
-        if (model.mbeans.containsKey(name)) {
+        if (model.remoteBeans.containsKey(name)) {
             throw new IllegalArgumentException("MBean with name '$name' already defined!")
         }
 
@@ -131,13 +177,29 @@ class JmxMBean {
         this.name = name
         this.objectName = objectName
 
-        model.mbeans[name] = this
+        model.remoteBeans[name] = this
     }
 
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
     def toString() {
         "MBean $name = '$objectName'"
     }
 
+    /**
+     *  Factory to create the correct kind of bean reference, depending
+     *  on whether the object name is a literla reference or a pattern
+     *  containing '*'.
+     *
+     *  @param model Model containing the bean reference.
+     *  @param name Name of the new bean.
+     *  @param objectName Object name in the remote JVM.
+     *  @return New bean reference.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
     static JmxMBean create(model, name, objectName) {
         def jmxObjectName
         try {
@@ -159,11 +221,24 @@ class JmxMBean {
  *  Simple (scalar) MBean.
  */
 class JmxSimpleMBean extends JmxMBean {
+    /**
+     *  Create a new simple remote bean reference.
+     *
+     *  @param model Model containing the bean reference.
+     *  @param name Name of the new bean.
+     *  @param objectName Object name in the remote JVM.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
     protected JmxSimpleMBean(model, name, objectName) {
         super(model, name, objectName)
     }
 
-
+    /**
+     *  Direct lookup of the specified objectname in the remote JVM.
+     *
+     *  @param agent Remote JVM.
+     *  @return List containing the remote bean.
+     */
     def lookupBeans(agent) {
         [agent.getBean(objectName)]
     }
@@ -178,37 +253,68 @@ class JmxMBeanGroup extends JmxMBean {
     def filters = [:]
 
 
+    /**
+     *  Create a new reference to a group of remote beans matching the
+     *  patterns in the objectname.
+     *
+     *  @param model Model containing the bean reference.
+     *  @param name Name of the new bean.
+     *  @param objectName Object name query for the remote JVM.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
     protected JmxMBeanGroup(model, name, objectName) {
         super(model, name, objectName)
 
-        // this might seem overly complex, but real-life experience shows
-        // that queries for 'key=*' or 'key=prefix*' don't work, just ones
+        // the following might seem overly complex, but real-life experience
+        // shows that queries for 'key=*' or 'key=prefix*' don't work, just ones
         // with a trailing ',*'
-        def literals = []
+
+        // Should work in theory, leads to failed queries in real life
         //def quote = ObjectName.&quote
         def quote = { it }
+
+        // divide keys into literal ones and patterns
+        def literals = []
         objectName.keyPropertyList.each { key, val ->
             if (val.endsWith('*')) {
-                filters[key] = val[0..-2]
+                filters[key] = (val =='*') ? '' : val[0..-2]
             } else {
                 literals << "${quote(key)}=${quote(val)}"
             }
         }
+
+        // put literal keys into query for remote filtering
         this.objectName = new ObjectName("${quote(objectName.domain)}:${literals.join(',')},*")
     }
 
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
     def toString() {
         "${super.toString()} filters=${filters}"
     }
 
-
+    /**
+     *  Checks whether the given objectname passes the filter criteria.
+     *
+     *  @param objectName JMX objectname to be checked.
+     *  @return True if all criteria match.
+     */
     private Boolean passesFilter(objectName) {
+        // filter is passed if no mismatch is found
         null == filters.find {
             !objectName.getKeyProperty(it.key).startsWith(it.value)
         }
     }
 
-
+    /**
+     *  Lookup list of concrete beans matching the query in the remote JVM.
+     *
+     *  @param agent Remote JVM.
+     *  @return List containing the remote beans.
+     */
     def lookupBeans(agent) {
         def result = []
         //println "Query $objectName"
@@ -231,22 +337,28 @@ class JmxModel {
     final clusters = [:]
 
     // map of mbeans in this model
-    final mbeans = [:]
+    final remoteBeans = [:]
 
     // root cluster
     final rootCluster = new JmxCluster(this, null, '')
 
-    // definition of aggregation beans
-    def beans
+    // definition of target beans
+    def targetBeans
 
+
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
     def toString() {
         def result = [rootCluster.toString()]
 
-        mbeans.each { key, bean ->
+        remoteBeans.each { key, bean ->
             result << bean.toString()
         }
 
-        result << beans.inspect()
+        result << targetBeans.inspect()
 
         return result.join('\n')
     }

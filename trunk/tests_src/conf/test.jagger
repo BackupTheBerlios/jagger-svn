@@ -19,11 +19,11 @@ cluster('myapplication') {
     }
 }
 
-mbean threading: 'java.lang:type=Threading',
+remoteBean threading: 'java.lang:type=Threading',
       memory: 'java.lang:type=Memory',
       requests: 'Catalina:type=GlobalRequestProcessor,name=*'
 
-beans = [
+targetBeans = [
     tomcatState: [
         'requests': { sum(requests.requestCount) },
         'maxTime': { max(requests.maxTime) },
