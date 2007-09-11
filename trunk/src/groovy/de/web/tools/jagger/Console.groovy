@@ -157,11 +157,6 @@ class Console extends CLISupport {
             }
         }
 
-        // decode base64 password, if given in that format
-        if (config.w.startsWith('b64:')) {
-            config.w = new String(config.w[4..-1].decodeBase64())
-        }
-
         // all is fine and dandy
         return null
     }    

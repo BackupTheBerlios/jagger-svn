@@ -52,10 +52,16 @@ class JMXAgentFacade {
         if (jmxConnection == null) {
             def jmxEnv = null
             if (password != null) {
+                // decode base64 password, if given in that format
+                def jmxPwd = password
+                if (jmxPwd.startsWith('b64:')) {
+                    jmxPwd = new String(jmxPwd[4..-1].decodeBase64())
+                }
+
                 // this is the form Tomcat expects credentials, other
                 // containers might differ!
                 jmxEnv = [(JMXConnector.CREDENTIALS):
-                    [this.username, this.password] as String[]
+                    [username, jmxPwd] as String[]
                 ]
             }
 
