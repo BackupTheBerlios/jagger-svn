@@ -23,6 +23,23 @@ import de.web.tools.jagger.jmx.model.*;
 
 
 /**
+ *  Helper class to create beans in the "remoteBeans" closure.
+ */
+class RemoteBeanCreator {
+    // the model to create the beans in
+    def model
+
+    def invokeMethod(String name, args) {
+        if (args.size() != 1 || !(args[0] instanceof String)) {
+            def argsdump = args.collect({it.dump()}).join(', ')
+            throw new IllegalArgumentException("Bean definition '$name' must be followed by an object name, not $argsdump!")
+        }
+        JmxMBean.create(model, name, args[0])
+    }
+}
+
+
+/**
  *  DSL implementation.
  */
 class JmxConfigReader {
@@ -33,7 +50,7 @@ class JmxConfigReader {
     private final DSL_VERBS = [
         'include',
         'cluster', 'host',
-        'remoteBean',
+        'remoteBeans',
     ]
 
     // binding names that should be local to a scope
@@ -174,14 +191,13 @@ class JmxConfigReader {
     }
 
     /**
-     *  Implements the "remoteBean" verb.
+     *  Implements the "remoteBeans" verb.
      *
-     *  @param params Named parameters, interpreted as a "name:objectName" list.
+     *  @param definitions Closure with calls defining the beans.
      */
-    private void doRemoteBean(Map params) {
-        params.each { name, objectName ->
-            JmxMBean.create(model, name, objectName)
-        }
+    private void doRemoteBeans(Closure definitions) {
+        definitions.delegate = new RemoteBeanCreator(model: model)
+        definitions()
     }
 
     /**
@@ -246,7 +262,7 @@ class JmxConfigReader {
         // closure that tries to drop excessive information from exceptions thrown
         // while executing the script 
         def handleException = { ex, msg ->
-            throw ex
+            //throw ex
             def trace = ex.stackTrace
                 .findAll { it.fileName == className }
                 .collect { "${script.name}, line ${it.lineNumber}:" }

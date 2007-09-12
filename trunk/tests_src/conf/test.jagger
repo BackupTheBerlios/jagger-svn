@@ -19,9 +19,11 @@ cluster('myapplication') {
     }
 }
 
-remoteBean threading: 'java.lang:type=Threading',
-      memory: 'java.lang:type=Memory',
-      requests: 'Catalina:type=GlobalRequestProcessor,name=*'
+remoteBeans {
+    threading 'java.lang:type=Threading'
+    memory 'java.lang:type=Memory'
+    requests 'Catalina:type=GlobalRequestProcessor,name=http-*'
+}
 
 targetBeans = [
     tomcatState: [
