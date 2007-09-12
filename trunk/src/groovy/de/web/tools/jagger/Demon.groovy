@@ -192,7 +192,13 @@ class Demon extends CLISupport {
         }
 
         def cr = new JmxConfigReader()
-        def model = cr.loadModel(configFilename)
+        def model
+        try {
+            model = cr.loadModel(configFilename)
+        } catch (ScriptException ex) {
+            println "FATAL: ${ex.message}"
+            return 1
+        }
         println '~'*78
         println model.toString()
         println '~'*78
