@@ -149,7 +149,7 @@ class JmxCluster {
 /**
  *  Base class for named MBeans.
  */
-class JmxMBean {
+class JmxRemoteBean {
     // logical name
     String name
 
@@ -168,7 +168,7 @@ class JmxMBean {
      *  @param objectName Object name in the remote JVM.
      *  @throws IllegalArgumentException For duplicate names.
      */
-    protected JmxMBean(model, name, objectName) {
+    protected JmxRemoteBean(model, name, objectName) {
         if (model.remoteBeans.containsKey(name)) {
             throw new IllegalArgumentException("MBean with name '$name' already defined!")
         }
@@ -200,7 +200,7 @@ class JmxMBean {
      *  @return New bean reference.
      *  @throws IllegalArgumentException For duplicate names.
      */
-    static JmxMBean create(model, name, objectName) {
+    static JmxRemoteBean create(model, name, objectName) {
         def jmxObjectName
         try {
             jmxObjectName = objectName as ObjectName
@@ -209,9 +209,9 @@ class JmxMBean {
         }
 
         if (jmxObjectName.isPropertyPattern()) {
-            return new JmxMBeanGroup(model, name, jmxObjectName)
+            return new JmxRemoteBeanGroup(model, name, jmxObjectName)
         } else {
-            return new JmxSimpleMBean(model, name, jmxObjectName)
+            return new JmxSimpleRemoteBean(model, name, jmxObjectName)
         }
     }
 }
@@ -220,7 +220,7 @@ class JmxMBean {
 /**
  *  Simple (scalar) MBean.
  */
-class JmxSimpleMBean extends JmxMBean {
+class JmxSimpleRemoteBean extends JmxRemoteBean {
     /**
      *  Create a new simple remote bean reference.
      *
@@ -229,7 +229,7 @@ class JmxSimpleMBean extends JmxMBean {
      *  @param objectName Object name in the remote JVM.
      *  @throws IllegalArgumentException For duplicate names.
      */
-    protected JmxSimpleMBean(model, name, objectName) {
+    protected JmxSimpleRemoteBean(model, name, objectName) {
         super(model, name, objectName)
     }
 
@@ -248,7 +248,7 @@ class JmxSimpleMBean extends JmxMBean {
 /**
  *  A group of releated MBeans.
  */
-class JmxMBeanGroup extends JmxMBean {
+class JmxRemoteBeanGroup extends JmxRemoteBean {
     // the primary keys identifying each group bean
     def filters = [:]
 
@@ -262,7 +262,7 @@ class JmxMBeanGroup extends JmxMBean {
      *  @param objectName Object name query for the remote JVM.
      *  @throws IllegalArgumentException For duplicate names.
      */
-    protected JmxMBeanGroup(model, name, objectName) {
+    protected JmxRemoteBeanGroup(model, name, objectName) {
         super(model, name, objectName)
 
         // the following might seem overly complex, but real-life experience
@@ -343,7 +343,7 @@ class JmxModel {
     final rootCluster = new JmxCluster(this, null, '')
 
     // definition of target beans
-    def targetBeans
+    def targetBeans = [:]
 
 
     /**

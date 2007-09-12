@@ -25,12 +25,12 @@ remoteBeans {
     requests 'Catalina:type=GlobalRequestProcessor,name=http-*'
 }
 
-targetBeans = [
-    tomcatState: [
-        'requests': { sum(requests.requestCount) },
-        'maxTime': { max(requests.maxTime) },
-    ],
-]
+targetBeans {
+    tomcatState {
+        requests { sum(requests.requestCount) }
+        maxTime { max(requests.maxTime) }
+    }
+}
 
 println "end"
 

@@ -23,6 +23,27 @@ import de.web.tools.jagger.jmx.model.*;
 
 
 /**
+ *  Class with static helpers.
+ */
+class JmxConfigHelper {
+    /*
+     *  Throws an IllegalArgumentException is args doesn't match signature.
+     */
+    static void assertSignature(args, signature) {
+        if (args.size() != signature.size()) {
+            throw new IllegalArgumentException("Expected ${signature.size()} arguments but got ${args.size()}!")
+        }
+
+        args.eachWithIndex { arg, idx ->
+            if (!signature[idx].isInstance(arg)) {
+                throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
+            }
+        }
+    }
+}
+
+
+/**
  *  Helper class to create beans in the "remoteBeans" closure.
  */
 class RemoteBeanCreator {
@@ -30,11 +51,55 @@ class RemoteBeanCreator {
     def model
 
     def invokeMethod(String name, args) {
-        if (args.size() != 1 || !(args[0] instanceof String)) {
-            def argsdump = args.collect({it.dump()}).join(', ')
-            throw new IllegalArgumentException("Bean definition '$name' must be followed by an object name, not $argsdump!")
+        JmxConfigHelper.assertSignature(args, [String])
+        JmxRemoteBean.create(model, name, args[0])
+    }
+}
+
+
+/**
+ *  Helper class to create attributes in beans in the "targetBeans" closure.
+ */
+class TargetBeanAttributeCreator {
+    // the bean to create the attributes in
+    def bean
+
+    def invokeMethod(String name, args) {
+        JmxConfigHelper.assertSignature(args, [Closure])
+    }
+}
+
+
+/**
+ *  Helper class to create beans in the "targetBeans" closure.
+ */
+class TargetBeanCreator {
+    // the model to create the beans in
+    def model
+
+    // the bean to create an attribute in (level 2)
+    def bean = null
+
+
+    def invokeMethod(String name, args) {
+        JmxConfigHelper.assertSignature(args, [Closure])
+
+        if (bean == null) {
+            if (model.targetBeans.containsKey(name)) {
+                throw new IllegalArgumentException("Bean '$name' already defined!")
+            }
+            bean = [:]
+            model.targetBeans[name] = bean
+            println "TBC: $name"
+            args[0].call()
+            bean = null
+        } else {
+            if (bean.containsKey(name)) {
+                throw new IllegalArgumentException("Attribute '$name' already defined!")
+            }
+            println "TBA: $name"
+            bean[name] = args[0]
         }
-        JmxMBean.create(model, name, args[0])
     }
 }
 
@@ -50,7 +115,7 @@ class JmxConfigReader {
     private final DSL_VERBS = [
         'include',
         'cluster', 'host',
-        'remoteBeans',
+        'remoteBeans', 'targetBeans',
     ]
 
     // binding names that should be local to a scope
@@ -201,6 +266,16 @@ class JmxConfigReader {
     }
 
     /**
+     *  Implements the "targetBeans" verb.
+     *
+     *  @param definitions Closure with calls defining the beans.
+     */
+    private void doTargetBeans(Closure definitions) {
+        definitions.delegate = new TargetBeanCreator(model: model)
+        definitions()
+    }
+
+    /**
      *  Implements the "include" verb.
      *
      *  This tries to resolve the given path in the following order: <ol>
@@ -315,7 +390,6 @@ class JmxConfigReader {
     public JmxModel loadModel(script) {
         init()
         execScript(script)
-        model.targetBeans = binding.targetBeans
         return model
     }
 

@@ -140,7 +140,7 @@ class Executor {
         model.targetBeans.each { beanName, bean ->
             bean.each { attributeName, closure ->
                 closure.delegate = new ModelDelegate(context: context)
-                closure.resolveStrategy = closure.DELEGATE_ONLY
+                //closure.resolveStrategy = Closure.DELEGATE_ONLY
                 println "$attributeName = ${closure()}"
             }
         }
