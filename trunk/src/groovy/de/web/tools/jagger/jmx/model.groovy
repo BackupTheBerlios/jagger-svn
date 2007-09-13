@@ -284,7 +284,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
         }
 
         // put literal keys into query for remote filtering
-        this.objectName = new ObjectName("${quote(objectName.domain)}:${literals.join(',')},*")
+        this.objectName = new ObjectName("${quote(objectName.domain)}:${(literals + '*').join(',')}")
     }
 
     /**
@@ -305,7 +305,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
     private Boolean passesFilter(objectName) {
         // filter is passed if no mismatch is found
         null == filters.find {
-            !objectName.getKeyProperty(it.key).startsWith(it.value)
+            !objectName.getKeyProperty(it.key)?.startsWith(it.value)
         }
     }
 
@@ -393,7 +393,7 @@ class JmxModel {
     final rootCluster = new JmxCluster(this, null, '')
 
     // definition of target beans
-    def targetBeans = [:]
+    final targetBeans = [:]
 
 
     /**
