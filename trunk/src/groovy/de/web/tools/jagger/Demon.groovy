@@ -25,21 +25,22 @@ import de.web.tools.jagger.jmx.JMXAgentFacade;
 
 
 class AttributeAccessor {
-    def mbean
+    def remoteBean
     def property
 
     public toString() {
-        return "$property@${mbean.objectName}"
+        return "$property@${remoteBean.objectName}"
     }    
 }
 
 
-class MBeanAccessor {
+class RemoteBeanAccessor {
     def context
-    def mbean
+    def remoteBean
 
     public Object getProperty(final String property) {
-        new AttributeAccessor(mbean: mbean, property: property)
+        //println "GET $property@${remoteBean.name}"
+        new AttributeAccessor(remoteBean: remoteBean, property: property)
     }    
 }
 
@@ -55,7 +56,7 @@ class ModelDelegate {
 
     public Object getProperty(final String property) {
         //println "Accessing bean $property"
-        return new MBeanAccessor(context: context, mbean: context.model.remoteBeans[property])
+        return new RemoteBeanAccessor(context: context, remoteBean: context.model.remoteBeans[property])
     }
 
     public sum(accessor) {
@@ -112,15 +113,15 @@ class ExecutionContext {
             }
             
             def cachedBeans = beanCache[agent.url]
-            if (!cachedBeans.containsKey(accessor.mbean.name)) {
-                cachedBeans[accessor.mbean.name] = accessor.mbean.lookupBeans(agent)
-                def names = cachedBeans[accessor.mbean.name].collect { it.name().canonicalName }
+            if (!cachedBeans.containsKey(accessor.remoteBean.name)) {
+                cachedBeans[accessor.remoteBean.name] = accessor.remoteBean.lookupBeans(agent)
+                def names = cachedBeans[accessor.remoteBean.name].collect { it.name().canonicalName }
                 trace {
-                    "Lookup for '$accessor.mbean.name' returned ${names.join(', ')}"
+                    "Lookup for '$accessor.remoteBean.name' returned ${names.join(', ')}"
                 }
             }
 
-            cachedBeans[accessor.mbean.name].each {
+            cachedBeans[accessor.remoteBean.name].each {
                 def val = it.getProperty(accessor.property)
                 //trace { "${instance.url}:${accessor.toString()} = $val" }
                 result << val
@@ -138,10 +139,10 @@ class Executor {
     public run() {
         def context = new ExecutionContext(model: model)
         model.targetBeans.each { beanName, bean ->
-            bean.each { attributeName, closure ->
-                closure.delegate = new ModelDelegate(context: context)
-                //closure.resolveStrategy = Closure.DELEGATE_ONLY
-                println "$attributeName = ${closure()}"
+            bean.attributes.each { attributeName, attribute ->
+                attribute.expression.delegate = new ModelDelegate(context: context)
+                //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
+                println "${attribute.name} = ${attribute.expression.call()}"
             }
         }
     }

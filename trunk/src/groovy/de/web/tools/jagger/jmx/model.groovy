@@ -147,7 +147,7 @@ class JmxCluster {
 
 
 /**
- *  Base class for named MBeans.
+ *  Base class for named beans on remote JVMs.
  */
 class JmxRemoteBean {
     // logical name
@@ -161,7 +161,7 @@ class JmxRemoteBean {
 
 
     /**
-     *  Create a new remote bean reference.
+     *  Creates a new remote bean reference.
      *
      *  @param model Model containing the bean reference.
      *  @param name Name of the new bean.
@@ -170,7 +170,7 @@ class JmxRemoteBean {
      */
     protected JmxRemoteBean(model, name, objectName) {
         if (model.remoteBeans.containsKey(name)) {
-            throw new IllegalArgumentException("MBean with name '$name' already defined!")
+            throw new IllegalArgumentException("Remote bean with name '$name' already defined!")
         }
 
         this.model = model
@@ -186,7 +186,7 @@ class JmxRemoteBean {
      *  @return String representation of this object.
      */
     def toString() {
-        "MBean $name = '$objectName'"
+        "Remote bean $name = '$objectName'"
     }
 
     /**
@@ -218,11 +218,11 @@ class JmxRemoteBean {
 
 
 /**
- *  Simple (scalar) MBean.
+ *  Simple (scalar) remote bean.
  */
 class JmxSimpleRemoteBean extends JmxRemoteBean {
     /**
-     *  Create a new simple remote bean reference.
+     *  Creates a new simple remote bean reference.
      *
      *  @param model Model containing the bean reference.
      *  @param name Name of the new bean.
@@ -246,7 +246,7 @@ class JmxSimpleRemoteBean extends JmxRemoteBean {
 
 
 /**
- *  A group of releated MBeans.
+ *  A group of related remote beans.
  */
 class JmxRemoteBeanGroup extends JmxRemoteBean {
     // the primary keys identifying each group bean
@@ -254,7 +254,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
 
 
     /**
-     *  Create a new reference to a group of remote beans matching the
+     *  Creates a new reference to a group of remote beans matching the
      *  patterns in the objectname.
      *
      *  @param model Model containing the bean reference.
@@ -330,13 +330,63 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
 
 
 /**
+ *  Aggregated bean in the local JVM.
+ */
+class JmxTargetBean {
+    // logical name
+    String name
+
+    // the model we're part of
+    def model
+
+    // description of the bean
+    String description = ''
+
+    // description of the bean
+    def attributes = [:]
+
+
+    /**
+     *  Creates a new target bean.
+     *
+     *  @param model Model containing the bean reference.
+     *  @param name Name of the new bean.
+     *  @throws IllegalArgumentException For duplicate names.
+     */
+    protected JmxTargetBean(model, name) {
+        if (model.targetBeans.containsKey(name)) {
+            throw new IllegalArgumentException("Target bean with name '$name' already defined!")
+        }
+
+        this.model = model
+        this.name = name
+
+        model.targetBeans[name] = this
+    }
+
+    /**
+     *  Generates a textual description of this object.
+     *
+     *  @return String representation of this object.
+     */
+    def toString() {
+        def result = ["Target bean $name '$description'"]
+        attributes.each { key, attr ->
+            result << "    Attribute ${attr.name} '${attr.description}'"
+        }
+        result.join('\n')
+    }
+}
+
+
+/**
  *  Complete JMX data model.
  */
 class JmxModel {
     // map of clusters in this model
     final clusters = [:]
 
-    // map of mbeans in this model
+    // map of remote beans in this model
     final remoteBeans = [:]
 
     // root cluster
@@ -358,7 +408,9 @@ class JmxModel {
             result << bean.toString()
         }
 
-        result << targetBeans.inspect()
+        targetBeans.each { key, bean ->
+            result << bean.toString()
+        }
 
         return result.join('\n')
     }

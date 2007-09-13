@@ -58,22 +58,11 @@ class RemoteBeanCreator {
 
 
 /**
- *  Helper class to create attributes in beans in the "targetBeans" closure.
- */
-class TargetBeanAttributeCreator {
-    // the bean to create the attributes in
-    def bean
-
-    def invokeMethod(String name, args) {
-        JmxConfigHelper.assertSignature(args, [Closure])
-    }
-}
-
-
-/**
  *  Helper class to create beans in the "targetBeans" closure.
  */
 class TargetBeanCreator {
+    final KNOWN_OPTIONS = ['description']
+
     // the model to create the beans in
     def model
 
@@ -82,23 +71,39 @@ class TargetBeanCreator {
 
 
     def invokeMethod(String name, args) {
-        JmxConfigHelper.assertSignature(args, [Closure])
+        def description
+        def expression
+
+        if (args.size() == 1) {
+            JmxConfigHelper.assertSignature(args, [Closure])
+            expression = args[0]
+        } else {
+            JmxConfigHelper.assertSignature(args, [Map, Closure])
+            if (!KNOWN_OPTIONS.containsAll(args[0].keySet())) {
+                def bad = args[0].keySet() - KNOWN_OPTIONS
+                throw new IllegalArgumentException("Unknown option(s) '${bad.join(', ')}', expected one of '${KNOWN_OPTIONS.join(', ')}'!")
+            }
+            description = args[0].description
+            expression = args[1]
+        }
+        if (description == null) description = ''
 
         if (bean == null) {
             if (model.targetBeans.containsKey(name)) {
                 throw new IllegalArgumentException("Bean '$name' already defined!")
             }
-            bean = [:]
-            model.targetBeans[name] = bean
-            println "TBC: $name"
-            args[0].call()
+            bean = new JmxTargetBean(model, name)
+            bean.description = description
+            expression.call()
             bean = null
         } else {
-            if (bean.containsKey(name)) {
+            if (bean.attributes.containsKey(name)) {
                 throw new IllegalArgumentException("Attribute '$name' already defined!")
             }
-            println "TBA: $name"
-            bean[name] = args[0]
+            bean.attributes[name] = new Expando()
+            bean.attributes[name].name = name
+            bean.attributes[name].description = description
+            bean.attributes[name].expression = expression
         }
     }
 }
@@ -337,7 +342,7 @@ class JmxConfigReader {
         // closure that tries to drop excessive information from exceptions thrown
         // while executing the script 
         def handleException = { ex, msg ->
-            //throw ex
+            throw ex
             def trace = ex.stackTrace
                 .findAll { it.fileName == className }
                 .collect { "${script.name}, line ${it.lineNumber}:" }
