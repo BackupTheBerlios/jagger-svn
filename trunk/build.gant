@@ -211,7 +211,7 @@ task(compile_tests: 'Compile all the tests.') {
 task(test: 'Run all the tests in the build.') {
     depends(compile_tests)
 
-    Ant.junit(printsummary: 'yes', showoutput: 'true') {
+    Ant.junit(printsummary: 'yes', showoutput: 'true', haltonfailure: 'yes') {
         formatter(type: 'plain')
 
         batchtest(fork: 'yes', todir: target_reports_dir) {
@@ -328,6 +328,7 @@ task(build: 'Create a build of the project') {
 */
 task('dist': 'Create a full source distribution of the project') {
     // call dependant tasks
+    depends(test) 
     depends(build) 
     if (has_groovydoc) {
         depends(doc)
@@ -360,6 +361,7 @@ task('dist': 'Create a full source distribution of the project') {
     make a binary distribution
 */
 task('package': 'Create a full binary distribution of the project') {
+    depends(test) 
     depends(build) 
 
     root = "${project_name}-${version}"
