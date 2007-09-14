@@ -20,7 +20,7 @@
 RAW=true
 
 # make our own JMX agent available? (used for testing)
-JMX_REMOTE_PORT=$(grep jmx.remote.port= jagger.properties 2>/dev/null | sed -e 's/jmx.remote.port=//g')
+JMX_REMOTE_PORT=$(grep -e '^ *jmx.remote.port *[=:]' jagger.properties 2>/dev/null | sed -e 's/ *jmx.remote.port *[=:] *//g')
 
 if test -z $GROOVY_HOME; then
     echo >&2 "You must set GROOVY_HOME!"
