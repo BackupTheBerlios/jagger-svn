@@ -52,8 +52,10 @@ JAVA_OPTS="$JAVA_OPTS -Dproject.home=$SCRIPTROOT"
 
 if test $JMX_REMOTE_PORT; then
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=$JMX_REMOTE_PORT"
-    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=true"
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.password.file=$SCRIPTROOT/@conf_path@/jmxremote.password.properties"
+    JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.access.file=$SCRIPTROOT/@conf_path@/jmxremote.access.properties"
 fi
 
 startGroovy @project.package@.Demon "$@"
