@@ -147,6 +147,26 @@ class JmxCluster {
 
 
 /**
+ *  Decorator for remote bean alias evaluation.
+ */
+class JmxRemoteBeanAliasEvaluator extends groovy.util.Proxy {
+    // alias definitions
+    def aliases
+
+    public getProperty(String name) {
+        //println "!!! $name"
+        if (aliases.containsKey(name)) {
+            //println "!!! Evaluating $name"
+            aliases[name].delegate = getAdaptee()
+            return aliases[name].call(getAdaptee())
+        } else {
+            return getAdaptee().getProperty(name)
+        }
+    }
+}
+
+
+/**
  *  Base class for named beans on remote JVMs.
  */
 class JmxRemoteBean {
@@ -158,6 +178,9 @@ class JmxRemoteBean {
 
     // the model we're part of
     def model
+
+    // scaled or computed values
+    def aliases = [:]
 
 
     /**
@@ -181,12 +204,26 @@ class JmxRemoteBean {
     }
 
     /**
+     *  Wraps the given bean into a proxy if necessary.
+     *
+     *  @param bean The GroovyMBean.
+     *  @return Possibly wrapped bean.
+     */
+    protected withAliases(bean) {
+        if (aliases) {
+            def proxy = new JmxRemoteBeanAliasEvaluator(aliases: aliases)
+            bean = proxy.wrap(bean)
+        }
+        return bean
+    }
+    
+    /**
      *  Generates a textual description of this object.
      *
      *  @return String representation of this object.
      */
     def toString() {
-        "Remote bean $name = '$objectName'"
+        "Remote bean $name: mbean='$objectName'; aliases=${aliases.keySet().join(', ')}"
     }
 
     /**
@@ -240,7 +277,7 @@ class JmxSimpleRemoteBean extends JmxRemoteBean {
      *  @return List containing the remote bean.
      */
     def lookupBeans(agent) {
-        [agent.getBean(objectName)]
+        [withAliases(agent.getBean(objectName))]
     }
 }
 
@@ -293,7 +330,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
      *  @return String representation of this object.
      */
     def toString() {
-        "${super.toString()} filters=${filters}"
+        "${super.toString()}; filters=${filters}"
     }
 
     /**
@@ -321,10 +358,10 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
         agent.queryBeans(objectName) { name, bean ->
             //println name
             if (passesFilter(name)) {
-                result << bean
+                result << withAliases(bean)
             }
         }
-        result
+        return result
     }
 }
 

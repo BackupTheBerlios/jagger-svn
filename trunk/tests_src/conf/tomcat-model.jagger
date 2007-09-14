@@ -1,0 +1,24 @@
+// Sample model description for a Tomcat container JVM
+
+// mapping from remote object names to identifiers
+remoteBeans {
+    threading 'java.lang:type=Threading'
+    memory 'java.lang:type=Memory'
+}
+
+remoteBeans {
+    requests('Catalina:type=GlobalRequestProcessor,name=http-*') {
+        maxTime { maxTime / 1000.0 } // scale to seconds
+    }
+}
+
+// aggregating beans
+targetBeans {
+    tomcatState(description: 'Summarized Tomcat State') {
+        requests { sum(requests.requestCount) }
+        maxTime(description: 'Maximum request duration [sec]') {
+            max(requests.maxTime)
+        }
+    }
+}
+

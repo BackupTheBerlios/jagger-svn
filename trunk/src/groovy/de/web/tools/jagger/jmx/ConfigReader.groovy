@@ -50,9 +50,34 @@ class RemoteBeanCreator {
     // the model to create the beans in
     def model
 
+    // currently defined bean
+    def bean = null
+
     def invokeMethod(String name, args) {
-        JmxConfigHelper.assertSignature(args, [String])
-        JmxRemoteBean.create(model, name, args[0])
+        def result
+
+        if (bean == null) {
+            // bean definition
+            if (args.size() == 1) {
+                // called with string only
+                JmxConfigHelper.assertSignature(args, [String])
+            } else {
+                // called with string and closure defining aliases
+                JmxConfigHelper.assertSignature(args, [String, Closure])
+            }
+            result = JmxRemoteBean.create(model, name, args[0])
+            if (args.size() > 1) {
+                bean = result
+                args[1].call(bean)
+                bean = null
+            }
+        } else {
+            // alias definition
+            JmxConfigHelper.assertSignature(args, [Closure])
+            bean.aliases[name] = args[0]
+        }
+
+        return result
     }
 }
 
