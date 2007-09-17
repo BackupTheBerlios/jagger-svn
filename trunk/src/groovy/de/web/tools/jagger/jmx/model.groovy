@@ -401,6 +401,11 @@ class JmxTargetBean {
         model.targetBeans[name] = this
     }
 
+    public getDescription() {
+        description ? description : "Managed object '$name'"
+    }
+
+
     /**
      *  Generates a textual description of this object.
      *
