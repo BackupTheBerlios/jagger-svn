@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: JmxAgentFacade.groovy 44 2007-07-25 12:27:29Z jhermann $
+    $Id$
 */
 
 package de.web.tools.jagger.jmx.model;

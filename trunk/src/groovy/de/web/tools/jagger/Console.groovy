@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    $Id: CLI.groovy 68 2007-09-04 09:35:41Z jhermann $
+    $Id$
 */
 
 package de.web.tools.jagger;
