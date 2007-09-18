@@ -21,7 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.JmxConfigReader;
-import de.web.tools.jagger.jmx.execution.Executor;
+import de.web.tools.jagger.jmx.execution.ExecutionContext;
 
 
 /**
@@ -81,7 +81,7 @@ class Demon extends CLISupport {
         println model.toString()
         println '~'*78
 
-        new Executor(model: model).run()
+        new ExecutionContext(model: model).register()
 
         println 'Waiting forever...'
         Thread.sleep(Long.MAX_VALUE)
