@@ -20,6 +20,8 @@ package de.web.tools.jagger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.lang.management.ManagementFactory;
+
 import de.web.tools.jagger.jmx.JmxConfigReader;
 import de.web.tools.jagger.jmx.execution.ExecutionContext;
 
@@ -82,6 +84,23 @@ class Demon extends CLISupport {
         println '~'*78
 
         new ExecutionContext(model: model).register()
+
+        def mbs = ManagementFactory.getPlatformMBeanServer()
+        model.targetBeans.values().each { bean ->
+            def gmb = new GroovyMBean(mbs, "de.web.management:type=Aggregator,name=${bean.name}")
+            //println gmb.dump()
+            println gmb.name()
+            gmb.info().attributes.each { attr ->
+                def val
+                try {
+                    val = gmb."${attr.name}"
+                } catch (Exception ex) {
+                    val = 'Unavailable'
+                }
+                    
+                println "    ${bean.name}.${attr.name} = ${val} '${attr.description}'"
+            }
+        }
 
         println 'Waiting forever...'
         Thread.sleep(Long.MAX_VALUE)
