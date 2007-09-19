@@ -61,14 +61,19 @@ class ModelDelegateTest extends GroovyTestCase {
     def TEST_VALUES = [47, 11]
 
     private testAggregatorMethod(name, expected) {
+        testAggregatorMethod(name, expected, TEST_VALUES)
+    }
+    
+    private testAggregatorMethod(name, expected, values) {
         def context = new Expando(
             pollInstances: { acc ->
-                assert acc == TEST_VALUES
+                assert acc == values
                 acc
             }
         )
         def md = new ModelDelegate(context: context)
-        assert md."$name"(TEST_VALUES) == expected
+        def val = md."$name"(values)
+        assert val == expected
     }
 
     void testGetProperty() {
@@ -81,18 +86,37 @@ class ModelDelegateTest extends GroovyTestCase {
 
     void testSum() {
         testAggregatorMethod('sum', 58)
+        testAggregatorMethod('sum', null, [])
     }
 
     void testMin() {
         testAggregatorMethod('min', 11)
+        testAggregatorMethod('min', null, [])
     }
 
     void testMax() {
         testAggregatorMethod('max', 47)
+        testAggregatorMethod('max', null, [])
     }
 
     void testAvg() {
         testAggregatorMethod('avg', 29)
+        testAggregatorMethod('avg', null, [])
+    }
+
+    void testMedian() {
+        testAggregatorMethod('median', 29)
+        testAggregatorMethod('median', null, [])
+        testAggregatorMethod('median', 1, [1])
+        testAggregatorMethod('median', 2, [4, 1])
+        testAggregatorMethod('median', 2, [3, 1])
+        testAggregatorMethod('median', 2, [3, 1, 2])
+        testAggregatorMethod('median', 2, [1, 3, 3, 2])
+        testAggregatorMethod('median', 2, [1, 42, 2, 2])
+
+        testAggregatorMethod('median', 2.5, [4.0, 1.0])
+        testAggregatorMethod('median', 2.0, [3.0, 1.0, 2.0])
+        testAggregatorMethod('median', 2.0, [2.0, 3.0, 1.0, 2.0])
     }
 }
 

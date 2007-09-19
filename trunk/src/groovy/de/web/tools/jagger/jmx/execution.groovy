@@ -179,10 +179,29 @@ class ModelDelegate {
      */
     public avg(accessor) {
         def values = context.pollInstances(accessor)
+        if (!values) return
 
         return values.sum() / values.size()
     }
 
+    /**
+     *  Aggregator method for the median of all remote values.
+     *
+     *  @param accessor Accessor for the remote attribute.
+     *  @return Aggregated value.
+     */
+    public median(accessor) {
+        def values = context.pollInstances(accessor)
+        if (!values) return
+        values.sort()
+
+        def m = (values.size() / 2) as Integer
+        if (values.size() & 1) {
+            return values[m]
+        } else {
+            return ((values[m-1] + values[m]) / 2).asType(values[m].class)
+        }
+    }
 }
 
 
