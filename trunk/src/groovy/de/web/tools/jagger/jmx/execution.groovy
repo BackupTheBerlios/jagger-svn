@@ -37,6 +37,7 @@ import javax.management.openmbean.SimpleType;
 //import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.JMXAgentFacade;
+import de.web.tools.jagger.jmx.model.ModelEvaluationCategory;
 
 
 /**
@@ -211,6 +212,13 @@ class ModelDelegate {
  *  All methods of the DynamicMBean interface MUST be thread-safe.
  */
 class DynamicTargetMBean implements DynamicMBean {
+    private static runtimePackages = [
+        'sun.reflect.',
+        'java.lang.reflect.',
+        'org.codehaus.groovy.',
+        'groovy.lang.',
+    ]
+
     // the target bean
     private bean
 
@@ -246,13 +254,31 @@ class DynamicTargetMBean implements DynamicMBean {
         def result
         def attribute = bean.attributes[name]
 
-        // XXX Check whether this critical section could be smaller
-        synchronized (attribute) {
-            attribute.expression.delegate = modelDelegate
-            //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
-            result = attribute.expression.call()
+        try {
+            // XXX Check whether this critical section could be smaller
+            synchronized (attribute) {
+                attribute.expression.delegate = modelDelegate
+                //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
+                use(ModelEvaluationCategory) {
+                    result = attribute.expression.call()
+                }
+            }
+            result = result as String
+        } catch (Exception ex) {
+            // log evaluation errors to console
+            println 'v' * 78
+            println "Error while evaluating ${bean.name}.$name"
+            println "$ex"
+            ex.stackTrace.each { frame ->
+                if (null == runtimePackages.find { frame.className.startsWith(it) }) {
+                    println "    ${frame}"
+                }
+            }
+            println '^' * 78
+            throw ex
         }
-        return result as String
+
+        return result
     }
 
     /**
