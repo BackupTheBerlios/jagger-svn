@@ -1,5 +1,7 @@
 // Sample model description for a Tomcat container JVM
 
+def connectorType = '' // can also be 'http' or 'jk'
+
 // mapping from remote object names to identifiers
 remoteBeans {
     threading 'java.lang:type=Threading'
@@ -7,17 +9,41 @@ remoteBeans {
 }
 
 remoteBeans {
-    requests('Catalina:type=GlobalRequestProcessor,name=http-*') {
+    threadPool("Catalina:type=ThreadPool,name=${connectorType}*") {
+        threadsBusy { currentThreadsBusy / maxThreads }
+        threadsCreated { currentThreadCount / maxThreads }
+    }
+    requests("Catalina:type=GlobalRequestProcessor,name=${connectorType}*") {
         maxTime { maxTime / 1000.0 } // scale to seconds
+        avgTime { processingTime / requestCount.nonzero / 1000.0 } // secs
     }
 }
 
 // aggregating beans
 targetBeans {
     tomcatState(description: 'Summarized Tomcat State') {
-        requests { sum(requests.requestCount) }
-        maxTime(description: 'Maximum request duration [sec]') {
+        requests(description: 'Requests handled') {
+            sum(requests.requestCount)
+        }
+        avgLatency(description: 'Median of average request duration [sec]') {
+            median(requests.avgTime).scale(3)
+        }
+        maxLatency(description: 'Maximum request duration [sec]') {
             max(requests.maxTime)
+        }
+
+        threadsBusy(description: 'Thread pool utilization [%]') {
+            max(threadPool.threadsBusy).percent
+        }
+        threadsCreated(description: 'Thread pool consumption [%]') {
+            max(threadPool.threadsCreated).percent
+        }
+
+        inboundTraffic(description: 'Inbound traffic [MiB]') {
+            (sum(requests.bytesReceived) / 1024.0 / 1024.0).scale(2)
+        }
+        outboundTraffic(description: 'Outbound traffic [MiB]') {
+            (sum(requests.bytesSent) / 1024.0 / 1024.0).scale(2)
         }
     }
 }
