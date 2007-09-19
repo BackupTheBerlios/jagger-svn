@@ -109,15 +109,19 @@ class ExecutionContextTest extends GroovyTestCase {
         emc.registerWithServer = { server -> assert server == mbs; beans << delegate }
         emc.initialize()
 
-        def model = new Expando(targetBeans: [
-            1: new Expando(name: 'b1'),
-            2: new Expando(name: 'b2'),
-        ])
-        def context = new ExecutionContext(model: model)
-        context.register()
+        try {
+            def model = new Expando(targetBeans: [
+                1: new Expando(name: 'b1'),
+                2: new Expando(name: 'b2'),
+            ])
+            def context = new ExecutionContext(model: model)
+            context.register()
 
-        beans.eachWithIndex { bean, idx ->
-            bean.objectName.getKeyProperty('name') == "b${idx+1}"
+            beans.eachWithIndex { bean, idx ->
+                bean.objectName.getKeyProperty('name') == "b${idx+1}"
+            }
+        } finally {
+            GroovySystem.metaClassRegistry.removeMetaClass(emc.class)
         }
     }
 
