@@ -17,6 +17,7 @@
 
 package de.web.tools.jagger.jmx;
 
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException;
 import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.model.*;
@@ -35,8 +36,14 @@ class JmxConfigHelper {
         }
 
         args.eachWithIndex { arg, idx ->
+            //println arg.dump()
             if (!signature[idx].isInstance(arg)) {
-                throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
+                try {
+                    args[idx] = arg.asType(signature[idx])
+                    //println args[idx].dump()
+                } catch (GroovyCastException ex) {
+                    throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
+                }
             }
         }
     }
@@ -367,7 +374,7 @@ class JmxConfigReader {
         // closure that tries to drop excessive information from exceptions thrown
         // while executing the script 
         def handleException = { ex, msg ->
-            throw ex
+            //throw ex
             def trace = ex.stackTrace
                 .findAll { it.fileName == className }
                 .collect { "${script.name}, line ${it.lineNumber}:" }
