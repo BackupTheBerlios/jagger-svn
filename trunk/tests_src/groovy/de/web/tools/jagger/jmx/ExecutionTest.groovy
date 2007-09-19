@@ -118,7 +118,7 @@ class ExecutionContextTest extends GroovyTestCase {
             context.register()
 
             beans.eachWithIndex { bean, idx ->
-                bean.objectName.getKeyProperty('name') == "b${idx+1}"
+                assert bean.objectName.getKeyProperty('name') == "b${idx+1}"
             }
         } finally {
             GroovySystem.metaClassRegistry.removeMetaClass(emc.class)
