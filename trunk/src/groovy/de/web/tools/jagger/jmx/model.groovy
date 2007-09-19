@@ -241,7 +241,7 @@ class JmxRemoteBean {
 
     /**
      *  Factory to create the correct kind of bean reference, depending
-     *  on whether the object name is a literla reference or a pattern
+     *  on whether the object name is a literal reference or a pattern
      *  containing '*'.
      *
      *  @param model Model containing the bean reference.
