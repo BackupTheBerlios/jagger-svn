@@ -21,6 +21,24 @@ import javax.management.ObjectName;
 
 
 /**
+ *  Category with additional convenience methods available during evaluation.
+ */
+class ModelEvaluationCategory {
+    static getNonzero(Number self) {
+        self ? self : 1.asType(self.class)
+    }
+
+    static getPercent(Number self) {
+        (100.0 * self).setScale(2, BigDecimal.ROUND_HALF_DOWN)
+    }
+
+    static scale(Number self, Integer places) {
+        (self as BigDecimal).setScale(places, BigDecimal.ROUND_HALF_DOWN)
+    }
+}
+
+
+/**
  *  A single JVM on a host.
  */
 class JmxInstance {
@@ -164,12 +182,14 @@ class JmxRemoteBeanAliasEvaluator extends groovy.util.Proxy {
     public getProperty(String name) {
         def result
         //println "!!! $name"
-        if (aliases.containsKey(name)) {
+        if (getAliases().containsKey(name)) {
             //println "!!! Evaluating $name"
-            synchronized (aliases[name]) {
+            synchronized (getAliases()[name]) {
                 // context for the alias expression is the bean containing it
-                aliases[name].delegate = getAdaptee()
-                result = aliases[name].call(getAdaptee())
+                getAliases()[name].delegate = getAdaptee()
+                use(ModelEvaluationCategory) {
+                    result = getAliases()[name].call(getAdaptee())
+                }
             }
         } else {
             result = getAdaptee().getProperty(name)
