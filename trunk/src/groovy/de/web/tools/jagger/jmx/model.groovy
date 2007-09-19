@@ -58,12 +58,11 @@ class JmxInstance {
     /**
      *  Returns a list of instances in this object.
      *
-     *  @return List containig this one instance.
+     *  @return List containing this one instance.
      */
     def getInstances() {
         [this]
     }
-
 
     /**
      *  Generates a textual description of this object.
@@ -153,15 +152,29 @@ class JmxRemoteBeanAliasEvaluator extends groovy.util.Proxy {
     // alias definitions
     def aliases
 
+
+    /**
+     *  Evaluates an alias definition or gets a property of a remote bean.
+     *  Aliases take precedence, i.e. you can hide properties behind an alias
+     *  to e.g. scale them.
+     *
+     *  @param name Name of bean property or alias.
+     *  @return Property value.
+     */
     public getProperty(String name) {
+        def result
         //println "!!! $name"
         if (aliases.containsKey(name)) {
             //println "!!! Evaluating $name"
-            aliases[name].delegate = getAdaptee()
-            return aliases[name].call(getAdaptee())
+            synchronized (aliases[name]) {
+                // context for the alias expression is the bean containing it
+                aliases[name].delegate = getAdaptee()
+                result = aliases[name].call(getAdaptee())
+            }
         } else {
-            return getAdaptee().getProperty(name)
+            result = getAdaptee().getProperty(name)
         }
+        return result
     }
 }
 
@@ -401,10 +414,14 @@ class JmxTargetBean {
         model.targetBeans[name] = this
     }
 
+    /**
+     *  Ensures the description is never empty.
+     *
+     *  @return Description set from outside, or a default text.
+     */
     public getDescription() {
         description ? description : "Managed object '$name'"
     }
-
 
     /**
      *  Generates a textual description of this object.

@@ -40,7 +40,8 @@ import de.web.tools.jagger.jmx.JMXAgentFacade;
 
 
 /**
- *  Used by ExecutionContext::pollInstances to access the remote bean values.
+ *  Object returned for 2nd-level names (remote bean attributes) when evaluating
+ *  target bean attribute closures.
  */
 class RemoteAttributeAccessor {
     // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
@@ -197,11 +198,8 @@ class DynamicTargetMBean implements DynamicMBean {
     // exported object name
     private objectName
 
-    // execution context
-    private context
-
     // delegate for closure evaluation
-    private delegate
+    private modelDelegate
 
     // mbean metadata
     private mbeanInfo
@@ -210,12 +208,13 @@ class DynamicTargetMBean implements DynamicMBean {
     /**
      *  Creates a dynamic mbean instance for the given target bean definition.
      *
+     *  @param delegate Model delegate.
      *  @param bean Target bean.
      */
-    public DynamicTargetMBean(context, bean) {
+    public DynamicTargetMBean(delegate, bean) {
         this.bean = bean
+        this.modelDelegate = delegate
         objectName = new ObjectName("de.web.management:type=Aggregator,name=${bean.name}")
-        delegate = new ModelDelegate(context: context)
     }
 
     /**
@@ -230,7 +229,7 @@ class DynamicTargetMBean implements DynamicMBean {
 
         // XXX Check whether this critical section could be smaller
         synchronized (attribute) {
-            attribute.expression.delegate = delegate
+            attribute.expression.delegate = modelDelegate
             //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
             result = attribute.expression.call()
         }
@@ -358,8 +357,9 @@ class ExecutionContext {
      */
     public void register() {
         def mbs = ManagementFactory.getPlatformMBeanServer()
+        def delegate = new ModelDelegate(context: this)
         model.targetBeans.values().each { bean ->
-            def mb = new DynamicTargetMBean(this, bean)
+            def mb = new DynamicTargetMBean(delegate, bean)
             mb.registerWithServer(mbs)
         }
     }
