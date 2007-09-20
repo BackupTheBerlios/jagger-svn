@@ -4,16 +4,27 @@
 remoteBeans {
     threading 'java.lang:type=Threading'
     memory 'java.lang:type=Memory'
+    runtime 'java.lang:type=Runtime'
+    os 'java.lang:type=OperatingSystem'
 }
 
 // aggregating beans
 targetBeans {
     jvmState(description: 'Summarized Sun JVM State') {
-        threadPeak(description: 'Peak thread count of whole cluster') {
-            sum(threading.PeakThreadCount)
+        threadsPeak(description: 'Peak thread count of whole cluster') {
+            max(threading.PeakThreadCount)
         }
-        threadCount(description: 'Current thread count of whole cluster') {
+        threadsCount(description: 'Current thread count of whole cluster') {
             sum(threading.ThreadCount)
+        }
+        handlesMax(description: 'Maximum of open file handles') {
+            max(os.OpenFileDescriptorCount)
+        }
+        cpuLoadMax(description: 'Average CPU load since startup [%]') {
+            max(os.ProcessCpuTime / runtime.Uptime).percent
+        }
+        cpuLoad(description: 'Average CPU load since startup [%]') {
+            os.ProcessCpuTime / runtime.Uptime * 100
         }
     }
 }

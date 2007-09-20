@@ -26,6 +26,7 @@ targetBeans {
         maxLatency(description: 'Maximum request duration [sec]') {
             max(requests.maxTime)
         }
+        maxTime { requests.maxTime }
 
         threadsBusy(description: 'Thread pool utilization [%]') {
             max(threadPool.threadsBusy).percent

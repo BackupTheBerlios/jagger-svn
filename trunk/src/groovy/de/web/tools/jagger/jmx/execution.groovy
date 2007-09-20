@@ -41,10 +41,30 @@ import de.web.tools.jagger.jmx.model.ModelEvaluationCategory;
 
 
 /**
+ *  Base class for target bean attribute closure accessors.
+ */
+abstract class AttributeAccessorBase {
+    /**
+     *  Poll all remote beans in the given agent.
+     *
+     *  @param result List the new values get injected into.
+     *  @param agent Remote agent (connection).
+     *  @return Extended list.
+     */
+    abstract public injectValues(result, agent)
+
+    public plus(rhs)     { new OperationAccessor(this, rhs, { a, b -> a + b }) }
+    public minus(rhs)    { new OperationAccessor(this, rhs, { a, b -> a - b }) }
+    public multiply(rhs) { new OperationAccessor(this, rhs, { a, b -> a * b }) }
+    public div(rhs)      { new OperationAccessor(this, rhs, { a, b -> a / b }) }
+}
+
+
+/**
  *  Object returned for 2nd-level names (remote bean attributes) when evaluating
  *  target bean attribute closures.
  */
-class RemoteAttributeAccessor {
+class RemoteAttributeAccessor extends AttributeAccessorBase {
     // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
     private beanCache = [:]
 
@@ -93,6 +113,54 @@ class RemoteAttributeAccessor {
     public toString() {
         return "$attribute@${remoteBean.objectName}"
     }    
+}
+
+
+/**
+ *  Object returned for arithmetic operations on accessors.
+ */
+class OperationAccessor extends AttributeAccessorBase {
+    // left-hand side operand
+    def lhs
+
+    // right-hand side operand
+    def rhs
+
+    // operator to use (as a closure)
+    def operator
+
+
+    public OperationAccessor(lhs, rhs, operator) {
+        this.lhs = lhs
+        this.rhs = rhs
+        this.operator = operator
+    }
+
+    /**
+     *  Poll all remote beans in the given agent and create result list.
+     *
+     *  @param result List the new values get injected into.
+     *  @param agent Remote agent (connection).
+     *  @return Extended list.
+     */
+    public injectValues(result, agent) {
+        def lhsValues = lhs.injectValues([], agent)
+        def rhsValues
+        try {
+            // accessor?
+            rhsValues = rhs.injectValues([], agent)
+        } catch (MissingMethodException ex) {
+            // assume scalar
+            rhsValues = [rhs] * lhsValues.size()
+        }
+
+        assert lhsValues.size() == rhsValues.size()
+        lhsValues.eachWithIndex { lhsValue, idx ->
+            result << operator.call(lhsValue, rhsValues[idx])
+        }
+
+        return result
+    }
 }
 
 
@@ -261,8 +329,15 @@ class DynamicTargetMBean implements DynamicMBean {
                 //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
                 use(ModelEvaluationCategory) {
                     result = attribute.expression.call()
+
+                    // unaggregated values?
+                    if (result instanceof AttributeAccessorBase) {
+                        // poll them and return list
+                        result = modelDelegate.getContext().pollInstances(result)
+                    }
                 }
             }
+            
             result = result as String
         } catch (Exception ex) {
             // log evaluation errors to console
