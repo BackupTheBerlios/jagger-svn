@@ -29,11 +29,11 @@ class ModelEvaluationCategory {
     }
 
     static getPercent(Number self) {
-        (100.0 * self).setScale(2, BigDecimal.ROUND_HALF_DOWN)
+        (100.0 * self).setScale(2, BigDecimal.ROUND_HALF_UP)
     }
 
     static scale(Number self, Integer places) {
-        (self as BigDecimal).setScale(places, BigDecimal.ROUND_HALF_DOWN)
+        (self as BigDecimal).setScale(places, BigDecimal.ROUND_HALF_UP)
     }
 }
 
