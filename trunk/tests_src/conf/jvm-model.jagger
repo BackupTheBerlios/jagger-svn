@@ -1,0 +1,20 @@
+// Sample model description for a Sun JVM
+
+// mapping from remote object names to identifiers
+remoteBeans {
+    threading 'java.lang:type=Threading'
+    memory 'java.lang:type=Memory'
+}
+
+// aggregating beans
+targetBeans {
+    jvmState(description: 'Summarized Sun JVM State') {
+        threadPeak(description: 'Peak thread count of whole cluster') {
+            sum(threading.PeakThreadCount)
+        }
+        threadCount(description: 'Current thread count of whole cluster') {
+            sum(threading.ThreadCount)
+        }
+    }
+}
+

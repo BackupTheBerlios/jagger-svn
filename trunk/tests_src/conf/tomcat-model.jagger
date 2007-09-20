@@ -1,13 +1,8 @@
-// Sample model description for a Tomcat container JVM
+// Sample model description for a Tomcat container
 
 def connectorType = '' // can also be 'http' or 'jk'
 
 // mapping from remote object names to identifiers
-remoteBeans {
-    threading 'java.lang:type=Threading'
-    memory 'java.lang:type=Memory'
-}
-
 remoteBeans {
     threadPool("Catalina:type=ThreadPool,name=${connectorType}*") {
         threadsBusy { currentThreadsBusy / maxThreads }
