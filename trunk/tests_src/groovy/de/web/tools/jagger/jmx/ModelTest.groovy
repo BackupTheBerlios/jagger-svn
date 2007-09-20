@@ -20,6 +20,39 @@ package de.web.tools.jagger.jmx.model;
 import javax.management.ObjectName;
 
 
+class ModelEvaluationCategoryTest extends GroovyTestCase {
+    void testNonzero() {
+        use (ModelEvaluationCategory) {
+            assert 0.nonzero != 0
+            assert 1.nonzero == 1
+            assert 0.nonzero instanceof Integer
+            assert (0.0).nonzero instanceof BigDecimal
+        }
+    }
+
+    void testPercent() {
+        use (ModelEvaluationCategory) {
+            assert 1.percent == 100.0
+            assert 1.percent instanceof BigDecimal
+            assert (0.00004).percent == 0.00
+            assert (0.00005).percent == 0.01
+        }
+    }
+
+    void testScale() {
+        use (ModelEvaluationCategory) {
+            assert 1.scale(0) instanceof BigDecimal
+            assert (12345).scale(-2) == 12300
+            assert (1.2345).scale(0) == 1.0
+            assert (1.2345).scale(1) == 1.2
+            assert (1.2345).scale(2) == 1.23
+            assert (1.2344).scale(3) == 1.234
+            assert (1.2346).scale(3) == 1.235
+        }
+    }
+}
+
+
 class JmxInstanceTest extends GroovyTestCase {
     private static final CLUSTER = [
         model: [clusters: [:], remoteBeans: [:], rootCluster: CLUSTER, targetBeans: [:]],
