@@ -20,6 +20,8 @@ package de.web.tools.jagger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.commons.cli.GnuParser;
+
 import de.web.tools.jagger.util.License;
 
 
@@ -69,7 +71,8 @@ abstract class CLISupport {
         // describe common CLI options
         def cli = new CliBuilder(
             usage: "${License.APPNAME} [options]",
-            writer: new PrintWriter(System.out)
+            writer: new PrintWriter(System.out),
+            parser: new GnuParser()
         )
         cli.h(longOpt: 'help', 'Show this help message.')
         cli.v(longOpt: 'version', 'Show version information.')

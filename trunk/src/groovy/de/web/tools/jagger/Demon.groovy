@@ -17,11 +17,14 @@
 
 package de.web.tools.jagger;
 
+import java.text.SimpleDateFormat;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.lang.management.ManagementFactory;
 
+import de.web.tools.jagger.util.Fmt;
 import de.web.tools.jagger.jmx.JmxConfigReader;
 import de.web.tools.jagger.jmx.execution.ExecutionContext;
 
@@ -32,12 +35,64 @@ import de.web.tools.jagger.jmx.execution.ExecutionContext;
 class Demon extends CLISupport {
     private static Log log = LogFactory.getLog(Demon.class)
 
+    private final DATESTAMPFMT = new SimpleDateFormat('yyyy-MM-dd-HHmmss')
+    private final DATESTAMP = DATESTAMPFMT.format(new Date())
+    private final CSV_DELIM = ';'
+
 
     /**
      *  Demon instances are only created by main().
      */
     private Demon() {}
 
+    void dumpTargetBeansToCSV(model, destdir) {
+        def mbs = ManagementFactory.getPlatformMBeanServer()
+        def now = DATESTAMPFMT.format(new Date())
+
+        model.targetBeans.values().each { bean ->
+            def gmb = new GroovyMBean(mbs, "de.web.management:type=Aggregator,name=${bean.name}")
+            def outfile = new File(destdir, "${DATESTAMP}-${bean.name}.csv")
+            def attrs = gmb.info().attributes as List
+            attrs.sort { a, b -> a.name.compareTo(b.name) }
+
+            if (!outfile.exists()) {
+                def headers1 = attrs.collect { it.name }
+                def headers2 = attrs.collect { it.description }
+                outfile.append("Time;${headers1.join(CSV_DELIM)}\n")
+                //outfile.append("    ;${headers2.join(CSV_DELIM)}\n")
+            }
+            
+            def values = attrs.collect { attr ->
+                try {
+                    return gmb."${attr.name}"
+                } catch (Exception ex) {
+                    return 'Unavailable'
+                }
+            }
+            outfile.append("$now;${values.join(CSV_DELIM)}\n")
+
+            println "${Fmt.humanSize(outfile.size())} $now ${outfile.name}"
+        }
+    }
+
+    void dumpTargetBeans(model) {
+        def mbs = ManagementFactory.getPlatformMBeanServer()
+        model.targetBeans.values().each { bean ->
+            def gmb = new GroovyMBean(mbs, "de.web.management:type=Aggregator,name=${bean.name}")
+            //println gmb.dump()
+            println gmb.name()
+            gmb.info().attributes.each { attr ->
+                def val
+                try {
+                    val = gmb."${attr.name}"
+                } catch (Exception ex) {
+                    val = 'Unavailable'
+                }
+                    
+                println "    ${bean.name}.${attr.name} = ${val} '${attr.description}'"
+            }
+        }
+    }
 
     /**
      *  Add jagger's options to CLI builder.
@@ -45,8 +100,8 @@ class Demon extends CLISupport {
      *  @param cli CLI builder instance
      */
     protected void addOptions(cli) {
-        //cli.u(longOpt: 'username', args: 1, argName: 'USER',    'JMX username.')
-        //cli.w(longOpt: 'password', args: 1, argName: 'PWD',     'JMX password.')
+        cli.p(longOpt: 'poll', args: 1, argName: 'DESTDIR', 'Destination directory for poll data.')
+        cli.d(longOpt: 'poll-delay', args: 1, argName: 'SECS', 'Wait time between polls.')
     }    
 
 
@@ -64,10 +119,10 @@ class Demon extends CLISupport {
 
         def args = options.arguments()
         def configFilename
-        if (args) {
+        if (args.size() == 1) {
             configFilename = args[0]
         } else {
-            println "FATAL: You must specify a config filename!"
+            println "FATAL: You must specify exactly one config filename!"
             return 1
         }
 
@@ -84,26 +139,23 @@ class Demon extends CLISupport {
         println '~'*78
 
         new ExecutionContext(model: model).register()
+        dumpTargetBeans(model)
+        println '~'*78
 
-        def mbs = ManagementFactory.getPlatformMBeanServer()
-        model.targetBeans.values().each { bean ->
-            def gmb = new GroovyMBean(mbs, "de.web.management:type=Aggregator,name=${bean.name}")
-            //println gmb.dump()
-            println gmb.name()
-            gmb.info().attributes.each { attr ->
-                def val
-                try {
-                    val = gmb."${attr.name}"
-                } catch (Exception ex) {
-                    val = 'Unavailable'
-                }
-                    
-                println "    ${bean.name}.${attr.name} = ${val} '${attr.description}'"
+        if (options.p) {
+            while (true) {
+                def start = System.currentTimeMillis()
+                dumpTargetBeansToCSV(model, options.p)
+                def took = System.currentTimeMillis() - start
+                println "${took / 1000.0} secs"
+
+                def wait = 1000L * options.d.toLong() - took
+                if (wait > 0) Thread.sleep(wait)
             }
+        } else {
+            println 'Waiting forever...'
+            Thread.sleep(Long.MAX_VALUE)
         }
-
-        println 'Waiting forever...'
-        Thread.sleep(Long.MAX_VALUE)
 
         // log proper shutdown
         log.info("Jagger demon shutdown initiated by ${System.getProperty('user.name')}")
