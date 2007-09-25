@@ -24,8 +24,8 @@ do due to information overflow.
 <ul>
 <li>implemented in Groovy &#8212; flexible, yet fully integrated into J2EE environents.</li>
 <li>console mode with tailored information panels about the state of your JVM, container and applications.</li>
-<li>description of monitoring data model (<i>PLANNED</i>)</li>
-<li>aggregation of distributed mbean data in clustered host setups, exporting the result as mbeans again (<i>PLANNED</i>)</li>
+<li>description of monitoring data model (<i>SVN HEAD</i>)</li>
+<li>aggregation of distributed mbean data in clustered host setups, exporting the result as mbeans again (<i>SVN HEAD</i>)</li>
 <li>archival of monitoring data (<i>PLANNED</i>)</li>
 <li>SLA configuration, monitoring and enforcement (<i>PLANNED</i>)</li>
 <!--
@@ -40,7 +40,7 @@ do due to information overflow.
 <h2>Current limitations</h2>
 
 <ul>
-<li>only tested for JVMs that run Tomcat monitored by the JavaServiceWrapper (need feedback from other environments).</li>
+<li>only tested for JVMs that run Tomcat monitored by the JavaServiceWrapper (1.1 / SVN HEAD also connects to standard JVMs, but obviously panels specific to Tomcat won't work).</li>
 <li>no support for other application servers than Tomcat 5.5 yet (again, need help or feedback).</li>
 <li>since the start script handles the activation of the console RAW mode, Jagger is slightly UNIX-dependant (How do I handle raw keyboard I/O in Java under Windows?)</li>
 <li>version reporting uses WEB.DE standards (see <tt>applicationContext.xml</tt> for an example, you might find that useful for your projects).</li>
@@ -59,6 +59,28 @@ jconsole where it's buried in mostly irrelevant information.
 <a href="http://developer.berlios.de/dbimage.php?id=3662"><img src="http://developer.berlios.de/dbimage.php?id=3662" width="435" height="230" border="0" title="Jagger Webapps Panel (click to enlarge)" alt="Jagger Webapps Panel"></a>
 
 <p><a href="http://developer.berlios.de/screenshots/?group_id=8650">More screenshots</a> of other panels are available.</p>
+
+
+<h2>Demon mode</h2>
+<p>Started in demon mode, Jagger first reads the model definition
+describing the remote beans containing the raw monitoring attributes and
+possible aliases for computations on a scalar level, the target beans
+with the expressions to compute the aggregated attributes and a
+description of the cluster of JVMs that should be polled.
+</p>
+
+<p>It then registers the target beans with the local JMX agent and thus
+exports the defined data model of aggregated values to any interested
+JMX client. The following diagram shows the resulting data flow for a
+typical scenario.
+</p>
+
+<img src="img/arch/Composite_Structure_Diagram__Aggregation.jpg" border="0" alt="Jagger aggregation"><br />
+<quote>Data flow of aggregation.</quote>
+
+<p>It's also possible to periodically poll and dump a model definition
+to a set of CSV files for further batch processing.
+</p>
 
 
 <h2>How to get started</h2>
