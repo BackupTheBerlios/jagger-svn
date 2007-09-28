@@ -71,7 +71,7 @@ class Demon extends CLISupport {
             }
             outfile.append("$now;${values.join(CSV_DELIM)}\n")
 
-            println "${Fmt.humanSize(outfile.size())} $now ${outfile.name}"
+            println "$now ${Fmt.humanSize(outfile.size())} ${outfile.name}"
         }
     }
 
@@ -94,6 +94,21 @@ class Demon extends CLISupport {
         }
     }
 
+    private void visualWait(sleepTime) {
+        def now = System.currentTimeMillis()
+        def endTime = now + sleepTime
+        def interval = 1000L
+        def count = 0
+
+        while (now < endTime) {
+            print "${'-\\|/'[count % 4]} ${((endTime - now) / 1000) as Integer} secs       \r"
+            Thread.sleep([interval, endTime - now].min())
+            now = System.currentTimeMillis()
+            count++
+        }
+        print "${' ' * 78}\r"
+    }
+    
     /**
      *  Add jagger's options to CLI builder.
      *
@@ -147,10 +162,9 @@ class Demon extends CLISupport {
                 def start = System.currentTimeMillis()
                 dumpTargetBeansToCSV(model, options.p)
                 def took = System.currentTimeMillis() - start
-                println "${took / 1000.0} secs"
+                println "Took ${took / 1000.0} secs"
 
-                def wait = 1000L * options.d.toLong() - took
-                if (wait > 0) Thread.sleep(wait)
+                visualWait(1000L * options.d.toLong() - took)
             }
         } else {
             println 'Waiting forever...'
