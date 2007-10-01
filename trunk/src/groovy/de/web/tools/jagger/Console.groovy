@@ -186,16 +186,22 @@ class Console extends CLISupport {
      */
     private dumpVersions(filename) {
         def versionInfo = new Properties()
-        def outputFile = new File(filename)
+        def outputFile = null
+        def hash = '#'
 
-        // check output file before doing all the work for nothing
-        if (!outputFile.absoluteFile.parentFile.canWrite()) {
-            println("FATAL: Can't write to $outputFile")
-            return 1
+        if (filename != '-') {
+            outputFile = new File(filename)
+            hash = ''
+
+            // check output file before doing all the work for nothing
+            if (!(outputFile.canWrite() || outputFile.absoluteFile.parentFile.canWrite())) {
+                println("FATAL: Can't write to $outputFile")
+                return 1
+            }
         }
         
         iterateHosts { jvm ->
-            println "Connecting to ${jvm.agent.url}..."
+            println "${hash}Connecting to ${jvm.agent.url}..."
         
             def stem = "host.${jvm.agent.url.replace(':','.port.')}"
             jvm.versions.each { k, v ->
@@ -211,20 +217,24 @@ class Console extends CLISupport {
             }
         }
 
-        def stream
-        try {
-            stream = outputFile.newOutputStream()
-        } catch (FileNotFoundException ex) {
-            println("FATAL: Can't open $outputFile - ${ex.message}")
-            return 1
+        def stream = System.out
+        if (outputFile) {
+            try {
+                stream = outputFile.newOutputStream()
+            } catch (FileNotFoundException ex) {
+                println("FATAL: Can't open $outputFile - ${ex.message}")
+                return 1
+            }
         }
 
         try {
             versionInfo.store(stream, "Version infomation")
         } finally {
-            stream.close()
+            if (outputFile) {
+                stream.close()
+            }
         }
-        println "Wrote ${versionInfo.size()} properties to $outputFile"
+        println "${hash}Wrote ${versionInfo.size()} properties to ${outputFile ? outputFile : '<STDOUT>'}"
         return 0
     }
 
