@@ -78,6 +78,13 @@ class JmxInstanceTest extends GroovyTestCase {
         assert CLUSTER.children == [ji]
     }
 
+    void testUrlCtor() {
+        CLUSTER.children = []
+
+        def ji = new JmxInstance(CLUSTER, 'service:jmx:foo', 0)
+        assert ji.url == 'service:jmx:foo'
+    }
+
     void testGetInstances() {
         def ji = new JmxInstance(CLUSTER, 'example.com', 12345)
         assert ji.instances == [ji]
