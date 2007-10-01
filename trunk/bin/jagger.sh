@@ -30,9 +30,25 @@ fi
 # Get the fully qualified path to the script
 case $0 in
     /*) SCRIPT="$0" ;;
-    *)  SCRIPT="$(pwd)/$0" ;;
+    *)  SCRIPT="$PWD/$0" ;;
 esac
-SCRIPTROOT=$(dirname $(dirname $SCRIPT))
+
+# Get the real path to this script, resolving any symbolic links
+SCRIPTROOT=
+for C in $(echo $SCRIPT | tr " /" ": "); do
+    SCRIPTROOT="$SCRIPTROOT/$C"
+    while [ -h "$SCRIPTROOT" ] ; do
+        LINK=$(expr "$(ls -ld "$SCRIPTROOT")" : '.*-> \(.*\)$')
+        if expr "$LINK" : '/.*' >/dev/null; then
+            SCRIPTROOT="$LINK"
+        else
+            SCRIPTROOT="$(dirname "$SCRIPTROOT")/$LINK"
+        fi
+    done
+done
+
+# Change ":" chars back to spaces and resolve ".." and ".".
+SCRIPTROOT=$(cd "$(dirname "$(dirname "$(echo "$SCRIPTROOT" | tr : " ")")")" && pwd)
 
 # Generate the classpath
 CLASSPATH=$(ls -1 $SCRIPTROOT/@lib_path@/*.jar | tr "\n" : | sed -e 's/:$//')${CLASSPATH:+:$CLASSPATH}
