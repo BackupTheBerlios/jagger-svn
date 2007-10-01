@@ -145,6 +145,9 @@ class Demon extends CLISupport {
         def model
         try {
             model = cr.loadModel(configFilename)
+        } catch (java.io.FileNotFoundException ex) {
+            println "FATAL: Can't read model from $configFilename (${ex.message})"
+            return 1
         } catch (ScriptException ex) {
             println "FATAL: ${ex.message}"
             return 1
