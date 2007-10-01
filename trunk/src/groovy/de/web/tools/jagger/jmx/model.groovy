@@ -60,15 +60,20 @@ class JmxInstance {
      *  The new instance is automatically weaved into the model.
      *
      *  @param cluster Cluster this instance is a member of.
-     *  @param hostname Hostname.
-     *  @param port Port of JMX RMI registry.
+     *  @param hostname Hostname, or JMX URL.
+     *  @param port Port of JMX RMI registry, if a hostname is given.
      *  @throws AssertionError If port number not in range 1..65535
      */
     public JmxInstance (cluster, hostname, port) {
-        assert (1..65535).contains(port as Integer), "Illegal port number '${port}'" 
 
         this.cluster = cluster
-        this.url = "${hostname}:${port}"
+
+        if (hostname.startsWith('service:jmx:')) {
+            this.url = hostname
+        } else {
+            assert (1..65535).contains(port as Integer), "Illegal port number '${port}'" 
+            this.url = "${hostname}:${port}"
+        }
 
         cluster.children << this
     }
