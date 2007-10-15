@@ -106,6 +106,8 @@ task(initialize: 'Initialize prior to a build') {
     Ant.mkdir(dir: build_lib_dir)
     Ant.mkdir(dir: build_bin_dir)
     Ant.mkdir(dir: build_doc_dir)
+    Ant.mkdir(dir: "$build_share_dir/include")
+    Ant.mkdir(dir: "$build_share_dir/include/std")
 
     // download dependant JARs
     depends(download)
@@ -290,6 +292,12 @@ task(build: 'Create a build of the project') {
         filterset(refid: 'build-filter')
     }
     Ant.chmod(dir: build_conf_dir, includes: 'jmxremote.*', perm: 'og=')
+
+    // copy standard models
+    Ant.copy(todir: "$build_share_dir/include") {
+        fileset(dir: "$src_dir/include", includes: '**')
+        filterset(refid: 'build-filter')
+    }
 
     // copy shell wrappers
     Ant.copy(todir: build_bin_dir) {
