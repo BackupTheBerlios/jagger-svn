@@ -148,6 +148,9 @@ class JmxConfigReader {
     //private static log = LogFactory.getLog(JmxConfigReader.class)
     private static log = new Expando(debug: System.out.&println, info: System.out.&println)
 
+    // include repository directory
+    private static includeRepository = System.getProperty('jagger.repository')
+
     // known verbs of the DSL
     private final DSL_VERBS = [
         'include',
@@ -313,22 +316,22 @@ class JmxConfigReader {
     }
 
     /**
-     *  Implements the "include" verb.
+     *  Tries to resolve a given script or include filename.
      *
      *  This tries to resolve the given path in the following order: <ol>
      *    <li>as given, absolute or relative to the cwd</li>
      *    <li>relative to the including script</li>
      *    <li>as a classpath resource</li>
+     *    <li>in the include repository</li>
      *  </ol>
      *
      *  @param scriptPath Path to the script to include.
+     *  @return Resolved File object.
      */
-    private void doInclude(scriptPath) {
-        log.debug("Including $scriptPath...")
-
+    private resolveScriptName(scriptPath) {
         def resolved = scriptPath as File
         if (!resolved.isAbsolute()) {
-            if (!resolved.exists()) {
+            if (!resolved.exists() && loadedPaths) {
                 // try relative to including script
                 resolved = new File((loadedPaths[-1] as File).parent, scriptPath)
             }
@@ -340,6 +343,10 @@ class JmxConfigReader {
                     resolved = resource.path as File
                 }
             }
+            if (!resolved.exists() && includeRepository) {
+                // try in repository
+                resolved = new File(includeRepository, scriptPath)
+            }
         }
 
         // unable to resolve the given name?
@@ -347,8 +354,19 @@ class JmxConfigReader {
             throw new FileNotFoundException("Can't find '${scriptPath}' for inclusion!")
         }
 
+        return resolved
+    }
+
+    /**
+     *  Implements the "include" verb.
+     *
+     *  @param scriptPath Path to the script to include.
+     */
+    private void doInclude(scriptPath) {
+        log.debug("Including $scriptPath...")
+
         // execute the script by a recursive call
-        execScript(resolved)
+        execScript(scriptPath)
     }
     private void doInclude() {
         // catch common error with a nice message
@@ -361,7 +379,8 @@ class JmxConfigReader {
      *  @param script String or File object with the script's filename.
      */
     private void execScript(script) {
-        script = script as File
+        script = resolveScriptName(script)
+
         log.debug("Loading $script...")
         def scriptText = script.text
         def className = script.absolutePath.replaceAll('[^a-zA-Z0-9]', '_')

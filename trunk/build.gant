@@ -266,6 +266,7 @@ task(build: 'Create a build of the project') {
         filtersfile(file: "${target_dir}/build-filter.properties")
         filter(token: 'bin_path',  value: bin_path)
         filter(token: 'lib_path',  value: lib_path)
+        filter(token: 'share_path', value: share_path)
         filter(token: 'conf_path', value: conf_path)
         filter(token: 'doc_path',  value: doc_path)
     }
