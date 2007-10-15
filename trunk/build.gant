@@ -295,7 +295,7 @@ task(build: 'Create a build of the project') {
 
     // copy standard models
     Ant.copy(todir: "$build_share_dir/include") {
-        fileset(dir: "$src_dir/include", includes: '**')
+        fileset(dir: "${base_dir}/src/include", includes: '**')
         filterset(refid: 'build-filter')
     }
 
