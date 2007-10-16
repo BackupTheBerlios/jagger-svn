@@ -110,7 +110,7 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
      *
      *  @return Name of bean and attribute.
      */
-    public toString() {
+    public String toString() {
         return "$attribute@${remoteBean.objectName}"
     }    
 }

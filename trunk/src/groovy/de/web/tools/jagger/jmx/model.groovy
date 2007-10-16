@@ -92,7 +92,7 @@ class JmxInstance {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         "Instance '$url'"
     }
 }
@@ -157,7 +157,7 @@ class JmxCluster {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         // append all children's representation, indenting them by one level
         def members = children
             .inject([]) { r, c -> r + c.toString().tokenize('\n') }
@@ -260,7 +260,7 @@ class JmxRemoteBean {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         "Remote bean $name: mbean='$objectName'; aliases=${aliases.keySet().join(', ')}"
     }
 
@@ -367,7 +367,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         "${super.toString()}; filters=${filters}"
     }
 
@@ -453,7 +453,7 @@ class JmxTargetBean {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         def result = ["Target bean $name '$description'"]
         attributes.each { key, attr ->
             result << "    Attribute ${attr.name} '${attr.description}'"
@@ -485,7 +485,7 @@ class JmxModel {
      *
      *  @return String representation of this object.
      */
-    def toString() {
+    def String toString() {
         def result = [rootCluster.toString()]
 
         remoteBeans.each { key, bean ->
