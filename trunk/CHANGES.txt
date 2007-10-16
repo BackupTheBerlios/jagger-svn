@@ -2,7 +2,7 @@ jagger Changelog
 ================
 
 x xxx xxx xx 2007 Release 1.1
-- Jagger now requires Groovy 1.1-beta-2!
+- Jagger now requires Groovy 1.1-RC-1 or 1.1-beta-2!
 
 - New command line interface for demon mode (jagger-demon)
 - Implemented JMX model / aggregation DSL

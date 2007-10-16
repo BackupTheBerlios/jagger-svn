@@ -15,6 +15,14 @@ if (!groovyHome) {
     Ant.fail('You MUST set the environment variable GROOVY_HOME to compile this project.')
 }
 
+// version of GAnt used to build us
+gantVersion = null
+def gantPackage = Package.getPackage('gant')
+if (gantPackage) {
+    gantVersion = gantPackage.getImplementationVersion()
+}
+if (!gantVersion) gantVersion = 'N/A'
+
 // version of Groovy used to build us
 groovyVersion = InvokerHelper.getVersion()
 has_groovydoc = !groovyVersion.startsWith('1.0')
@@ -23,7 +31,7 @@ has_groovydoc = !groovyVersion.startsWith('1.0')
 Ant.property(file: 'build.properties')
 def project_name = Ant.project.properties.'project.name'
 def version = Ant.project.properties.'project.version'
-Ant.echo(message: "Building ${project_name}-${version}...")
+Ant.echo(message: "Building ${project_name}-${version} using Groovy $groovyVersion / GAnt $gantVersion")
 
 // declare reference to project folders
 def base_dir = new File("").canonicalPath
@@ -93,7 +101,7 @@ def artifactName(tag, extension) {
 /*
     create the folders required by the build
 */
-task(initialize: 'Initialize prior to a build') {
+target(initialize: 'Initialize prior to a build') {
     // create target directories
     Ant.mkdir(dir: target_dir)
     Ant.mkdir(dir: target_docs_dir)
@@ -129,7 +137,7 @@ task(initialize: 'Initialize prior to a build') {
 /*
     download libraries we're depending on
 */
-task(download: "download libraries we're depending on") {
+target(download: "download libraries we're depending on") {
     // create cache dir
     Ant.mkdir(dir: jar_cache)
 
@@ -161,7 +169,7 @@ task(download: "download libraries we're depending on") {
     this target compiles the Java classes using the jars in the Groovy lib folder and the project lib folder
     as classpath. It then compile the groovy classes using the previous classpath plus the compiled Java classes
 */
-task(compile: 'Compile all classes.') {
+target(compile: 'Compile all classes.') {
     depends(initialize)
 
     Ant.javac(srcdir: java_source_dir, destDir: target_classes_dir,
@@ -183,7 +191,7 @@ task(compile: 'Compile all classes.') {
     this target compiles using the jars in the Groovy lib folder and the project lib folder
     as classpath. This target is mainly used by the test target as a dependency
 */
-task(compile_tests: 'Compile all the tests.') {
+target(compile_tests: 'Compile all the tests.') {
     depends(compile)
 
     Ant.javac(srcdir: java_tests_dir,
@@ -210,7 +218,7 @@ task(compile_tests: 'Compile all the tests.') {
 /*
     executes all the unit tests in the project        
 */
-task(test: 'Run all the tests in the build.') {
+target(test: 'Run all the tests in the build.') {
     depends(compile_tests)
 
     Ant.junit(printsummary: 'yes', showoutput: 'true', haltonfailure: 'yes') {
@@ -232,7 +240,7 @@ task(test: 'Run all the tests in the build.') {
 /*
     generate documentation
 */
-task(doc: 'Generate API documentation.') {
+target(doc: 'Generate API documentation.') {
     depends(initialize)
 
     if (!has_groovydoc) {
@@ -253,7 +261,7 @@ task(doc: 'Generate API documentation.') {
     creates a build folder that contains the project's main artifacts
     in a way that is suitable for packaging
 */
-task(build: 'Create a build of the project') {
+target(build: 'Create a build of the project') {
     depends(compile)
 
     // filterset for "build" filtering
@@ -336,7 +344,7 @@ task(build: 'Create a build of the project') {
 /*
     make a source distribution
 */
-task('dist': 'Create a full source distribution of the project') {
+target('dist': 'Create a full source distribution of the project') {
     // call dependant tasks
     depends(test) 
     depends(build) 
@@ -370,7 +378,7 @@ task('dist': 'Create a full source distribution of the project') {
 /*
     make a binary distribution
 */
-task('package': 'Create a full binary distribution of the project') {
+target('package': 'Create a full binary distribution of the project') {
     depends(test) 
     depends(build) 
 
@@ -395,7 +403,7 @@ task('package': 'Create a full binary distribution of the project') {
 /*
     make a full release
 */
-task('release': 'Create a full release of the project') {
+target('release': 'Create a full release of the project') {
     depends(dist)
     depends('package')
 }
@@ -404,14 +412,14 @@ task('release': 'Create a full release of the project') {
 /*
     build the website
 */
-task('www': 'Build website tree from templates.') {
+target('www': 'Build website tree from templates.') {
 }
 
 
 /*
     run tests by default.
 */
-task('default': 'The default target, currently test.') {
+target('default': 'The default target, currently test.') {
     test()
 }
 
