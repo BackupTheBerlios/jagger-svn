@@ -17,6 +17,7 @@
 
 package de.web.tools.jagger.jmx;
 
+import javax.management.InstanceNotFoundException;
 import javax.management.AttributeNotFoundException;
 
 
@@ -64,10 +65,16 @@ class TomcatFacade {
 
         // get beans for this agent
         try {
-            jswBean = agent.getBean('JavaServiceWrapper:service=WrapperManager')
-        } catch (InstanceNotFoundException) {
-            // JSW is optional
-            jswBean = null
+            // objectname using WrapperManager.mbean=true
+            jswBean = agent.getBean('org.tanukisoftware.wrapper:type=WrapperManager')
+        } catch (InstanceNotFoundException dummy1) {
+            try {
+                // older mbean name exported by "WrapperLifecycleListener" patch
+                jswBean = agent.getBean('JavaServiceWrapper:service=WrapperManager')
+            } catch (InstanceNotFoundException dummy2) {
+                // JSW is optional
+                jswBean = null
+            }
         }
         serverBean = agent.getBean('Catalina:type=Server')
 

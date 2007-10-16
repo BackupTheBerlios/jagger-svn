@@ -78,7 +78,7 @@ class Console extends CLISupport {
         cli.p(longOpt: 'port',     args: 1, argName: 'NNNNN',   'JMX port.')
         cli.u(longOpt: 'username', args: 1, argName: 'USER',    'JMX username.')
         cli.w(longOpt: 'password', args: 1, argName: 'PWD',     'JMX password.')
-        cli.V(longOpt: 'dump-versions', args: 1, argName: 'FILE', 'Dump version information to FILE.')
+        cli.V(longOpt: 'dump-versions', args: 1, argName: 'FILE', "Dump version information to FILE ('-' for stdout).")
     }    
 
 

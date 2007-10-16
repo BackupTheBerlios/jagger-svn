@@ -2,11 +2,18 @@ jagger Changelog
 ================
 
 x xxx xxx xx 2007 Release 1.1
-- Jagger now requires Groovy 1.1!
-- Added unit tests, fixed some bugs found by them
-- Made Tomcat and JSW optional (navel-gazing now possible)
+- Jagger now requires Groovy 1.1-beta-2!
+
 - New command line interface for demon mode (jagger-demon)
 - Implemented JMX model / aggregation DSL
+- Implemented model export via JMX
+- Implemented model polling into CSV files
+
+- "-V" option to dump component version information to a property file
+
+- Added unit tests, fixed some bugs found by them
+- Made Tomcat and JSW optional (navel-gazing now possible)
+- Support for current "WrapperManager" object name
 
 =============================================================================
 * Fri Jul 27 2007 Release 1.0
