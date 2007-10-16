@@ -60,6 +60,8 @@ fi
 
 
 ##JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.class=de.web.tools.jagger.util.LogManager"
+##JAVA_OPTS="$JAVA_OPTS -Dorg.apache.commons.logging.diagnostics.dest=STDERR"
+JAVA_OPTS="$JAVA_OPTS -Dorg.apache.commons.logging.Log=org.apache.commons.logging.impl.Jdk14Logger"
 JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.file=$SCRIPTROOT/@conf_path@/logging.properties"
 JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote"
 JAVA_OPTS="$JAVA_OPTS -Dproject.name=@project.name@"
