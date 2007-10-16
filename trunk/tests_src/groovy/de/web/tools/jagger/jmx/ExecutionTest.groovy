@@ -128,24 +128,19 @@ class ModelDelegateTest extends GroovyTestCase {
 class ExecutionContextTest extends GroovyTestCase {
     void testRegister() {
         def beans = []
-        def mbs = ManagementFactory.getPlatformMBeanServer()
-        def emc = new ExpandoMetaClass(DynamicTargetMBean)
-        emc.registerWithServer = { server -> assert server == mbs; beans << delegate }
-        emc.initialize()
+        def mbs = new Expando([
+            registerMBean: { bean, name -> beans << bean },
+        ])
 
-        try {
-            def model = new Expando(targetBeans: [
-                1: new Expando(name: 'b1'),
-                2: new Expando(name: 'b2'),
-            ])
-            def context = new ExecutionContext(model: model)
-            context.register()
+        def model = new Expando(targetBeans: [
+            1: new Expando(name: 'b1'),
+            2: new Expando(name: 'b2'),
+        ])
+        def context = new ExecutionContext(model: model, mbeanServer: mbs)
+        context.register()
 
-            beans.eachWithIndex { bean, idx ->
-                assert bean.objectName.getKeyProperty('name') == "b${idx+1}"
-            }
-        } finally {
-            GroovySystem.metaClassRegistry.removeMetaClass(emc.class)
+        beans.eachWithIndex { bean, idx ->
+            assert bean.objectName.getKeyProperty('name') == "b${idx+1}"
         }
     }
 

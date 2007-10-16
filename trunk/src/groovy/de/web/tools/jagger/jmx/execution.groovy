@@ -467,6 +467,9 @@ class ExecutionContext {
     // cache for connection facades to remote agents, indexed by URL
     private agentCache = [:]
 
+    // mbean server
+    def mbeanServer
+
     // the model to execute
     def model
 
@@ -476,7 +479,7 @@ class ExecutionContext {
      *  in the model.
      */
     public void register() {
-        def mbs = ManagementFactory.getPlatformMBeanServer()
+        def mbs = mbeanServer ? mbeanServer : ManagementFactory.getPlatformMBeanServer()
         def delegate = new ModelDelegate(context: this)
         model.targetBeans.values().each { bean ->
             def mb = new DynamicTargetMBean(delegate, bean)
