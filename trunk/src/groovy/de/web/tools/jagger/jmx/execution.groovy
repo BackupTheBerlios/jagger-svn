@@ -90,7 +90,17 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
             }
             def cachedBeans = beanCache[agent.url]
             if (!cachedBeans.containsKey(remoteBean.name)) {
-                cachedBeans[remoteBean.name] = remoteBean.lookupBeans(agent)
+                try {
+                    cachedBeans[remoteBean.name] = remoteBean.lookupBeans(agent)
+                // XXX need to better handle failed servers, at least provide
+                // a list of those as a target bean attribute
+                } catch (java.rmi.ConnectException ex) {
+                    // clear cache for failed instance
+                    beanCache[agent.url] = [:]
+
+                    // return unchanged result
+                    return result
+                }
                 //println "Lookup for '$remoteBean.name' returned ${cachedBeans[remoteBean.name].collect { it.name().canonicalName }.join(', ')}" }
             }
             beans = cachedBeans[remoteBean.name]
@@ -512,17 +522,28 @@ class ExecutionContext {
      *  @return List of current values.
      */
     public pollInstances(accessor) {
-        model.rootCluster.instances.inject([]) { result, instance ->
+        def reachable = 0
+        def values = model.rootCluster.instances.inject([]) { result, instance ->
             def agent
             try {
                 agent = getAgent(instance)
+            // XXX need to better handle failed servers, at least provide
+            // a list of those as a target bean attribute
+            } catch (java.rmi.ConnectException ex) {
             } catch (IOException ex) {
-                // XXX need to better handle failed servers, at least provide
-                // a list of those as a target bean attribute
             }
-            if (agent) accessor.injectValues(result, agent)
+
+            if (agent) {
+                ++reachable
+                accessor.injectValues(result, agent)
+            }
             return result
         }
+        if (!reachable) {
+            throw new IOException("All instances unreachable")
+        }
+        //println values
+        return values ? values : [0]
     }
 }
 
