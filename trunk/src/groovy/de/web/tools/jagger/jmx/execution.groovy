@@ -513,7 +513,15 @@ class ExecutionContext {
      */
     public pollInstances(accessor) {
         model.rootCluster.instances.inject([]) { result, instance ->
-            accessor.injectValues(result, getAgent(instance))
+            def agent
+            try {
+                agent = getAgent(instance)
+            } catch (IOException ex) {
+                // XXX need to better handle failed servers, at least provide
+                // a list of those as a target bean attribute
+            }
+            if (agent) accessor.injectValues(result, agent)
+            return result
         }
     }
 }
