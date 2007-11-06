@@ -60,8 +60,8 @@ class VersionPanel extends PanelBase {
             content << h1("${componentType} versions")
 
             // components of this type...
-            componentMap.each { name, version ->
-                content << "${''.padLeft(INDENT)} ${name.padRight(padding)} $version"
+            componentMap.eachWithIndex { item, idx ->
+                content << "${''.padLeft(INDENT)} ${item.key.padRight(padding , [' ',' .'][idx%2])} $item.value"
             }
         }
     }
