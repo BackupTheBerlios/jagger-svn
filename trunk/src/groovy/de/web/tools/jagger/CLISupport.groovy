@@ -67,7 +67,7 @@ abstract class CLISupport {
      *  @param args command line argument array
      *  @return exit code
      */
-    private process(args) {
+    protected process(args) {
         // describe common CLI options
         def cli = new CliBuilder(
             usage: "${License.APPNAME} [options]",
