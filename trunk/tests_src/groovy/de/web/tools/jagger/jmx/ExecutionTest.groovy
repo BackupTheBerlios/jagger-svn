@@ -148,22 +148,12 @@ class ExecutionContextTest extends GroovyTestCase {
         def model = new Expando(rootCluster:
              new Expando(instances: ['test1', 'test2'])
         )
-        def accessor = new Expando(
-            injectValues: { result, agent ->
-                result << "iV:$agent"
-                result
-            }
-        )
         def context = new ExecutionContext(model: model)
+        context.poller = new Expando([
+            pollInstances: { x, y -> [x, y] },
+        ])
 
-        def emc = new ExpandoMetaClass(context.class)
-        emc.getAgent = { "gA:$it" }
-        emc.initialize()
-        context.metaClass = emc
-
-        context.pollInstances(accessor).eachWithIndex { val, idx ->
-            assert val == ['iV:gA:test1', 'iV:gA:test2'][idx]
-        }
+        assert context.pollInstances('test3') == [['test1', 'test2'], 'test3']
     }
 }
 

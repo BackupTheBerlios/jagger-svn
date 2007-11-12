@@ -36,8 +36,8 @@ import javax.management.openmbean.SimpleType;
 //import org.apache.commons.logging.Log;
 //import org.apache.commons.logging.LogFactory;
 
-import de.web.tools.jagger.jmx.JMXAgentFacade;
 import de.web.tools.jagger.jmx.model.ModelEvaluationCategory;
+import de.web.tools.jagger.jmx.polling.RemotePoller;
 
 
 /**
@@ -474,8 +474,8 @@ class DynamicTargetMBean implements DynamicMBean {
  *  Since this is shared by all target beans, it has to be thread-safe.
  */
 class ExecutionContext {
-    // cache for connection facades to remote agents, indexed by URL
-    private agentCache = [:]
+    // remote data polling
+    def poller = new RemotePoller()
 
     // mbean server
     def mbeanServer
@@ -498,23 +498,6 @@ class ExecutionContext {
     }
 
     /**
-     *  Return agent facade for the given model instance.
-     *
-     *  @param instance Instance object in the model.
-     *  @return Agent facade (connection).
-     */
-    public synchronized getAgent(instance) {
-        if (!agentCache.containsKey(instance.url)) {
-            //println "Connecting to ${instance.toString()}..."
-            def agent = new JMXAgentFacade(url: instance.url, username: instance.username, password: instance.password)
-            agent.openConnection()
-            agentCache[instance.url] = agent
-        }
-
-        return agentCache[instance.url]
-    }
-
-    /**
      *  Poll all defined instances for the values of the given bean attribute
      *  accessor.
      *
@@ -522,28 +505,7 @@ class ExecutionContext {
      *  @return List of current values.
      */
     public pollInstances(accessor) {
-        def reachable = 0
-        def values = model.rootCluster.instances.inject([]) { result, instance ->
-            def agent
-            try {
-                agent = getAgent(instance)
-            // XXX need to better handle failed servers, at least provide
-            // a list of those as a target bean attribute
-            } catch (java.rmi.ConnectException ex) {
-            } catch (IOException ex) {
-            }
-
-            if (agent) {
-                ++reachable
-                accessor.injectValues(result, agent)
-            }
-            return result
-        }
-        if (!reachable) {
-            throw new IOException("All instances unreachable")
-        }
-        //println values
-        return values ? values : [0]
+        poller.pollInstances(model.rootCluster.instances, accessor)
     }
 }
 
