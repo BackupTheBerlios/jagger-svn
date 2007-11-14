@@ -43,7 +43,7 @@ import de.web.tools.jagger.jmx.polling.RemotePoller;
 /**
  *  Category with additional convenience methods available during evaluation.
  */
-class ModelEvaluationCategory {
+class AttributeEvaluationCategory {
     static getNonzero(Number self) {
         self ? self : 1.asType(self.class)
     }
@@ -373,7 +373,7 @@ class DynamicTargetMBean implements DynamicMBean {
             synchronized (attribute) {
                 attribute.expression.delegate = modelDelegate
                 //attribute.expression.resolveStrategy = Closure.DELEGATE_ONLY
-                use(ModelEvaluationCategory) {
+                use(AttributeEvaluationCategory) {
                     result = attribute.expression.call()
 
                     // unaggregated values?

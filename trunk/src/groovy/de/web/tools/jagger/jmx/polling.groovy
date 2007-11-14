@@ -20,7 +20,7 @@ package de.web.tools.jagger.jmx.polling;
 import javax.management.ObjectName;
 
 import de.web.tools.jagger.jmx.JMXAgentFacade;
-import de.web.tools.jagger.jmx.execution.ModelEvaluationCategory;
+import de.web.tools.jagger.jmx.execution.AttributeEvaluationCategory;
 
 
 /**
@@ -44,11 +44,12 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
         //println "!!! $name"
         if (getAliases().containsKey(name)) {
             //println "!!! Evaluating $name"
-            synchronized (getAliases()[name]) {
+            def alias = getAliases()[name]
+            synchronized (alias) {
                 // context for the alias expression is the bean containing it
-                getAliases()[name].delegate = getAdaptee()
-                use(ModelEvaluationCategory) {
-                    result = getAliases()[name].call(getAdaptee())
+                alias.delegate = getAdaptee()
+                use(AttributeEvaluationCategory) {
+                    result = alias.call(getAdaptee())
                 }
             }
         } else {
