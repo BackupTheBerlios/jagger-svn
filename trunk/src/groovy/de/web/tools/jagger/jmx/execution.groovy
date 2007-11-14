@@ -36,8 +36,25 @@ import javax.management.openmbean.SimpleType;
 //import org.apache.commons.logging.Log;
 //import org.apache.commons.logging.LogFactory;
 
-import de.web.tools.jagger.jmx.model.ModelEvaluationCategory;
 import de.web.tools.jagger.jmx.polling.RemotePoller;
+
+
+/**
+ *  Category with additional convenience methods available during evaluation.
+ */
+class ModelEvaluationCategory {
+    static getNonzero(Number self) {
+        self ? self : 1.asType(self.class)
+    }
+
+    static getPercent(Number self) {
+        (100.0 * self).setScale(2, BigDecimal.ROUND_HALF_UP)
+    }
+
+    static scale(Number self, Integer places) {
+        (self as BigDecimal).setScale(places, BigDecimal.ROUND_HALF_UP)
+    }
+}
 
 
 /**

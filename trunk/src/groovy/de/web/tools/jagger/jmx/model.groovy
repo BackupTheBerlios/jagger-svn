@@ -18,24 +18,7 @@
 package de.web.tools.jagger.jmx.model;
 
 import javax.management.ObjectName;
-
-
-/**
- *  Category with additional convenience methods available during evaluation.
- */
-class ModelEvaluationCategory {
-    static getNonzero(Number self) {
-        self ? self : 1.asType(self.class)
-    }
-
-    static getPercent(Number self) {
-        (100.0 * self).setScale(2, BigDecimal.ROUND_HALF_UP)
-    }
-
-    static scale(Number self, Integer places) {
-        (self as BigDecimal).setScale(places, BigDecimal.ROUND_HALF_UP)
-    }
-}
+import de.web.tools.jagger.jmx.execution.ModelEvaluationCategory;
 
 
 /**

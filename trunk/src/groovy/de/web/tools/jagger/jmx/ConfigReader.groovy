@@ -74,6 +74,7 @@ class RemoteBeanCreator {
             }
             result = JmxRemoteBean.create(model, name, args[0])
             if (args.size() > 1) {
+                // execute alias definitions
                 bean = result
                 args[1].call(bean)
                 bean = null
