@@ -61,9 +61,12 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
 
 
 /**
- *  Base class for named beans on remote JVMs.
+ *  Poller for named beans on remote JVMs.
  */
 class BeanPoller {
+    // polling context
+    private context
+    
     // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
     private beanCache = [:]
 
@@ -81,9 +84,11 @@ class BeanPoller {
      *  Creates a new poller for a remote bean or group of such beans, if
      *  the objectname contains patterns.
      *
+     *  @param context The polling context.
      *  @param bean The remote bean definition in the model.
      */
-    public BeanPoller(bean) {
+    public BeanPoller(context, bean) {
+        this.context = context
         remoteBean = bean
 
         if (remoteBean.objectName.isPropertyPattern()) {
@@ -210,6 +215,9 @@ class PollingContext {
     // cache for connection facades to remote agents, indexed by URL
     private agentCache = [:]
 
+    // cache for bean pollers
+    private beanCache = [:]
+
 
     /**
      *  Return agent facade for the given model instance.
@@ -228,9 +236,13 @@ class PollingContext {
         return agentCache[instance.url]
     }
 
-    public getBeanPoller(remoteBean)
+    public synchronized getBeanPoller(remoteBean)
     {
-        new BeanPoller(remoteBean)
+        if (!beanCache.containsKey(remoteBean.name)) {
+            beanCache[remoteBean.name] = new BeanPoller(this, remoteBean)
+        }
+
+        return beanCache[remoteBean.name]
     }
 
     /**
