@@ -36,6 +36,7 @@ import javax.management.openmbean.SimpleType;
 //import org.apache.commons.logging.Log;
 //import org.apache.commons.logging.LogFactory;
 
+import de.web.tools.jagger.jmx.polling.BeanPoller;
 import de.web.tools.jagger.jmx.polling.RemotePoller;
 
 
@@ -85,12 +86,30 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
     // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
     private beanCache = [:]
 
-    // proxy for remote bean
+    // poller for the remote bean
+    private beanPoller
+
+    // definition of remote bean
     def remoteBean
 
     // name of the remote attribute
     def attribute
 
+
+    /**
+     *  Create a new attribute accessor.
+     *
+     *  @param remoteBean Definition of remote bean.
+     *  @param attribute Name of the remote attribute.
+     *  @return Extended list.
+     */
+    public RemoteAttributeAccessor(remoteBean, attribute)
+    {
+        this.remoteBean = remoteBean
+        this.attribute = attribute
+
+        beanPoller = new BeanPoller(remoteBean)
+    }
 
     /**
      *  Poll all remote beans in the given agent.
@@ -108,7 +127,7 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
             def cachedBeans = beanCache[agent.url]
             if (!cachedBeans.containsKey(remoteBean.name)) {
                 try {
-                    cachedBeans[remoteBean.name] = remoteBean.lookupBeans(agent)
+                    cachedBeans[remoteBean.name] = beanPoller.lookupBeans(agent)
                 // XXX need to better handle failed servers, at least provide
                 // a list of those as a target bean attribute
                 } catch (java.rmi.ConnectException ex) {
@@ -210,7 +229,7 @@ class RemoteBeanAccessor {
      */
     public Object getProperty(final String attribute) {
         //println "GET $attribute@${remoteBean.name}"
-        new RemoteAttributeAccessor(remoteBean: remoteBean, attribute: attribute)
+        new RemoteAttributeAccessor(remoteBean, attribute)
     }    
 }
 

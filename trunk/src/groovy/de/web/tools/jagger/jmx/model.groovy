@@ -18,7 +18,6 @@
 package de.web.tools.jagger.jmx.model;
 
 import javax.management.ObjectName;
-import de.web.tools.jagger.jmx.execution.ModelEvaluationCategory;
 
 
 /**
@@ -48,7 +47,6 @@ class JmxInstance {
      *  @throws AssertionError If port number not in range 1..65535
      */
     public JmxInstance (cluster, hostname, port) {
-
         this.cluster = cluster
 
         if (hostname.startsWith('service:jmx:')) {
@@ -152,43 +150,7 @@ class JmxCluster {
 
 
 /**
- *  Decorator for remote bean alias evaluation.
- */
-class JmxRemoteBeanAliasEvaluator extends groovy.util.Proxy {
-    // alias definitions
-    def aliases
-
-
-    /**
-     *  Evaluates an alias definition or gets a property of a remote bean.
-     *  Aliases take precedence, i.e. you can hide properties behind an alias
-     *  to e.g. scale them.
-     *
-     *  @param name Name of bean property or alias.
-     *  @return Property value.
-     */
-    public getProperty(String name) {
-        def result
-        //println "!!! $name"
-        if (getAliases().containsKey(name)) {
-            //println "!!! Evaluating $name"
-            synchronized (getAliases()[name]) {
-                // context for the alias expression is the bean containing it
-                getAliases()[name].delegate = getAdaptee()
-                use(ModelEvaluationCategory) {
-                    result = getAliases()[name].call(getAdaptee())
-                }
-            }
-        } else {
-            result = getAdaptee().getProperty(name)
-        }
-        return result
-    }
-}
-
-
-/**
- *  Base class for named beans on remote JVMs.
+ *  Named bean on remote JVM.
  */
 class JmxRemoteBean {
     // logical name
@@ -212,53 +174,11 @@ class JmxRemoteBean {
      *  @param objectName Object name in the remote JVM.
      *  @throws IllegalArgumentException For duplicate names.
      */
-    protected JmxRemoteBean(model, name, objectName) {
+    public JmxRemoteBean(model, name, objectName) {
         if (model.remoteBeans.containsKey(name)) {
             throw new IllegalArgumentException("Remote bean with name '$name' already defined!")
         }
 
-        this.model = model
-        this.name = name
-        this.objectName = objectName
-
-        model.remoteBeans[name] = this
-    }
-
-    /**
-     *  Wraps the given bean into a proxy if necessary.
-     *
-     *  @param bean The GroovyMBean.
-     *  @return Possibly wrapped bean.
-     */
-    protected withAliases(bean) {
-        if (aliases) {
-            def proxy = new JmxRemoteBeanAliasEvaluator(aliases: aliases)
-            bean = proxy.wrap(bean)
-        }
-        return bean
-    }
-    
-    /**
-     *  Generates a textual description of this object.
-     *
-     *  @return String representation of this object.
-     */
-    def String toString() {
-        "Remote bean $name: mbean='$objectName'; aliases=${aliases.keySet().join(', ')}"
-    }
-
-    /**
-     *  Factory to create the correct kind of bean reference, depending
-     *  on whether the object name is a literal reference or a pattern
-     *  containing '*'.
-     *
-     *  @param model Model containing the bean reference.
-     *  @param name Name of the new bean.
-     *  @param objectName Object name in the remote JVM.
-     *  @return New bean reference.
-     *  @throws IllegalArgumentException For duplicate names.
-     */
-    static JmxRemoteBean create(model, name, objectName) {
         def jmxObjectName
         try {
             jmxObjectName = objectName as ObjectName
@@ -266,83 +186,11 @@ class JmxRemoteBean {
             jmxObjectName = new ObjectName(objectName)
         }
 
-        if (jmxObjectName.isPropertyPattern()) {
-            return new JmxRemoteBeanGroup(model, name, jmxObjectName)
-        } else {
-            return new JmxSimpleRemoteBean(model, name, jmxObjectName)
-        }
-    }
-}
+        this.model = model
+        this.name = name
+        this.objectName = jmxObjectName
 
-
-/**
- *  Simple (scalar) remote bean.
- */
-class JmxSimpleRemoteBean extends JmxRemoteBean {
-    /**
-     *  Creates a new simple remote bean reference.
-     *
-     *  @param model Model containing the bean reference.
-     *  @param name Name of the new bean.
-     *  @param objectName Object name in the remote JVM.
-     *  @throws IllegalArgumentException For duplicate names.
-     */
-    protected JmxSimpleRemoteBean(model, name, objectName) {
-        super(model, name, objectName)
-    }
-
-    /**
-     *  Direct lookup of the specified objectname in the remote JVM.
-     *
-     *  @param agent Remote JVM.
-     *  @return List containing the remote bean.
-     */
-    def lookupBeans(agent) {
-        [withAliases(agent.getBean(objectName))]
-    }
-}
-
-
-/**
- *  A group of related remote beans.
- */
-class JmxRemoteBeanGroup extends JmxRemoteBean {
-    // the primary keys identifying each group bean
-    def filters = [:]
-
-
-    /**
-     *  Creates a new reference to a group of remote beans matching the
-     *  patterns in the objectname.
-     *
-     *  @param model Model containing the bean reference.
-     *  @param name Name of the new bean.
-     *  @param objectName Object name query for the remote JVM.
-     *  @throws IllegalArgumentException For duplicate names.
-     */
-    protected JmxRemoteBeanGroup(model, name, objectName) {
-        super(model, name, objectName)
-
-        // the following might seem overly complex, but real-life experience
-        // shows that queries for 'key=*' or 'key=prefix*' don't work, just ones
-        // with a trailing ',*'
-
-        // Should work in theory, leads to failed queries in real life
-        //def quote = ObjectName.&quote
-        def quote = { it }
-
-        // divide keys into literal ones and patterns
-        def literals = []
-        objectName.keyPropertyList.each { key, val ->
-            if (val.endsWith('*')) {
-                filters[key] = (val =='*') ? '' : val[0..-2]
-            } else {
-                literals << "${quote(key)}=${quote(val)}"
-            }
-        }
-
-        // put literal keys into query for remote filtering
-        this.objectName = new ObjectName("${quote(objectName.domain)}:${(literals + '*').join(',')}")
+        model.remoteBeans[name] = this
     }
 
     /**
@@ -351,38 +199,7 @@ class JmxRemoteBeanGroup extends JmxRemoteBean {
      *  @return String representation of this object.
      */
     def String toString() {
-        "${super.toString()}; filters=${filters}"
-    }
-
-    /**
-     *  Checks whether the given objectname passes the filter criteria.
-     *
-     *  @param objectName JMX objectname to be checked.
-     *  @return True if all criteria match.
-     */
-    private Boolean passesFilter(objectName) {
-        // filter is passed if no mismatch is found
-        null == filters.find {
-            !objectName.getKeyProperty(it.key)?.startsWith(it.value)
-        }
-    }
-
-    /**
-     *  Lookup list of concrete beans matching the query in the remote JVM.
-     *
-     *  @param agent Remote JVM.
-     *  @return List containing the remote beans.
-     */
-    def lookupBeans(agent) {
-        def result = []
-        //println "Query $objectName"
-        agent.queryBeans(objectName) { name, bean ->
-            //println name
-            if (passesFilter(name)) {
-                result << withAliases(bean)
-            }
-        }
-        return result
+        "Remote bean $name: mbean='$objectName'; aliases=${aliases.keySet().join(', ')}"
     }
 }
 

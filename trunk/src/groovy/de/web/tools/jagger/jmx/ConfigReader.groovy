@@ -72,7 +72,7 @@ class RemoteBeanCreator {
                 // called with string and closure defining aliases
                 JmxConfigHelper.assertSignature(args, [String, Closure])
             }
-            result = JmxRemoteBean.create(model, name, args[0])
+            result = new JmxRemoteBean(model, name, args[0])
             if (args.size() > 1) {
                 // execute alias definitions
                 bean = result
