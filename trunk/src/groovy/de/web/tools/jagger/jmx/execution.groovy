@@ -37,11 +37,12 @@ import javax.management.openmbean.SimpleType;
 //import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.polling.BeanPoller;
-import de.web.tools.jagger.jmx.polling.RemotePoller;
+import de.web.tools.jagger.jmx.polling.PollingContext;
 
 
 /**
- *  Category with additional convenience methods available during evaluation.
+ *  Category with additional convenience methods available during evaluation
+ *  of remote bean aliases and target bean attributes.
  */
 class AttributeEvaluationCategory {
     static getNonzero(Number self) {
@@ -83,14 +84,8 @@ abstract class AttributeAccessorBase {
  *  target bean attribute closures.
  */
 class RemoteAttributeAccessor extends AttributeAccessorBase {
-    // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
-    private beanCache = [:]
-
     // poller for the remote bean
     private beanPoller
-
-    // definition of remote bean
-    def remoteBean
 
     // name of the remote attribute
     def attribute
@@ -99,16 +94,14 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
     /**
      *  Create a new attribute accessor.
      *
-     *  @param remoteBean Definition of remote bean.
+     *  @param remoteBeanAccessor Accessor for remote bean.
      *  @param attribute Name of the remote attribute.
      *  @return Extended list.
      */
-    public RemoteAttributeAccessor(remoteBean, attribute)
-    {
-        this.remoteBean = remoteBean
+    public RemoteAttributeAccessor(remoteBeanAccessor, attribute) {
         this.attribute = attribute
 
-        beanPoller = new BeanPoller(remoteBean)
+        beanPoller = remoteBeanAccessor.getContext().poller.getBeanPoller(remoteBeanAccessor.getRemoteBean())
     }
 
     /**
@@ -119,36 +112,7 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
      *  @return Extended list.
      */
     public injectValues(result, agent) {
-        def beans
-        synchronized (beanCache) {
-            if (!beanCache.containsKey(agent.url)) {
-                beanCache[agent.url] = [:]
-            }
-            def cachedBeans = beanCache[agent.url]
-            if (!cachedBeans.containsKey(remoteBean.name)) {
-                try {
-                    cachedBeans[remoteBean.name] = beanPoller.lookupBeans(agent)
-                // XXX need to better handle failed servers, at least provide
-                // a list of those as a target bean attribute
-                } catch (java.rmi.ConnectException ex) {
-                    // clear cache for failed instance
-                    beanCache[agent.url] = [:]
-
-                    // return unchanged result
-                    return result
-                }
-                //println "Lookup for '$remoteBean.name' returned ${cachedBeans[remoteBean.name].collect { it.name().canonicalName }.join(', ')}" }
-            }
-            beans = cachedBeans[remoteBean.name]
-        }
-
-        beans.each {
-            def val = it.getProperty(attribute)
-            //println "${instance.url}:${toString()} = $val"
-            result << val
-        }
-
-        return result
+        beanPoller.injectValues(result, agent, attribute)
     }
 
     /**
@@ -157,7 +121,7 @@ class RemoteAttributeAccessor extends AttributeAccessorBase {
      *  @return Name of bean and attribute.
      */
     public String toString() {
-        return "$attribute@${remoteBean.objectName}"
+        return "$attribute@${beanPoller.remoteBean.objectName}"
     }    
 }
 
@@ -229,7 +193,7 @@ class RemoteBeanAccessor {
      */
     public Object getProperty(final String attribute) {
         //println "GET $attribute@${remoteBean.name}"
-        new RemoteAttributeAccessor(remoteBean, attribute)
+        new RemoteAttributeAccessor(this, attribute)
     }    
 }
 
@@ -326,6 +290,7 @@ class ModelDelegate {
  *  All methods of the DynamicMBean interface MUST be thread-safe.
  */
 class DynamicTargetMBean implements DynamicMBean {
+    // package prefixes to be filtered from stack traces
     private static runtimePackages = [
         'sun.reflect.',
         'java.lang.reflect.',
@@ -386,7 +351,7 @@ class DynamicTargetMBean implements DynamicMBean {
             
             result = result as String
         } catch (Exception ex) {
-            // log evaluation errors to console
+            // XXX log evaluation errors to console
             println 'v' * 78
             println "Error while evaluating ${bean.name}.$name"
             println "$ex"
@@ -511,7 +476,7 @@ class DynamicTargetMBean implements DynamicMBean {
  */
 class ExecutionContext {
     // remote data polling
-    def poller = new RemotePoller()
+    def poller = new PollingContext()
 
     // mbean server
     def mbeanServer

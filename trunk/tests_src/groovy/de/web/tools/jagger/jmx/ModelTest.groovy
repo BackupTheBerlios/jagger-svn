@@ -20,39 +20,6 @@ package de.web.tools.jagger.jmx.model;
 import javax.management.ObjectName;
 
 
-class ModelEvaluationCategoryTest extends GroovyTestCase {
-    void testNonzero() {
-        use (ModelEvaluationCategory) {
-            assert 0.nonzero != 0
-            assert 1.nonzero == 1
-            assert 0.nonzero instanceof Integer
-            assert (0.0).nonzero instanceof BigDecimal
-        }
-    }
-
-    void testPercent() {
-        use (ModelEvaluationCategory) {
-            assert 1.percent == 100.0
-            assert 1.percent instanceof BigDecimal
-            assert (0.00004).percent == 0.00
-            assert (0.00005).percent == 0.01
-        }
-    }
-
-    void testScale() {
-        use (ModelEvaluationCategory) {
-            assert 1.scale(0) instanceof BigDecimal
-            assert (12345).scale(-2) == 12300
-            assert (1.2345).scale(0) == 1.0
-            assert (1.2345).scale(1) == 1.2
-            assert (1.2345).scale(2) == 1.23
-            assert (1.2344).scale(3) == 1.234
-            assert (1.2346).scale(3) == 1.235
-        }
-    }
-}
-
-
 class JmxInstanceTest extends GroovyTestCase {
     private static final CLUSTER = [
         model: [clusters: [:], remoteBeans: [:], rootCluster: CLUSTER, targetBeans: [:]],
@@ -155,6 +122,9 @@ class JmxRemoteBeanTest extends GroovyTestCase {
         assert jrb.objectName.toString() == 'junit:name=test'
         assert model.remoteBeans[jrb.name] == jrb
 
+        def jrb2 = new JmxRemoteBean(model, 'test2', 'junit:name=test2')
+        assert jrb2.objectName.toString() == 'junit:name=test2'
+
         shouldFail(IllegalArgumentException) {
             new JmxRemoteBean(model, 'test', new ObjectName('junit:name=duplicate'))
         }
@@ -166,74 +136,6 @@ class JmxRemoteBeanTest extends GroovyTestCase {
         def text = jrb.toString()
         assert text.contains(jrb.name)
         assert text.contains(jrb.objectName.toString())
-    }
-
-    void testCreate() {
-        def model = [remoteBeans: [:]]
-        def simple = JmxRemoteBean.create(model, 'simple', 'junit:name=simple')
-        def group = JmxRemoteBean.create(model, 'group', 'junit:name=*')
-        assert simple instanceof JmxSimpleRemoteBean
-        assert group instanceof JmxRemoteBeanGroup
-    }
-}
-
-
-class JmxSimpleRemoteBeanTest extends GroovyTestCase {
-    void testLookupBeans() {
-        def model = [remoteBeans: [:]]
-        def agent = [getBean: { it } ]
-        def simple = JmxRemoteBean.create(model, 'simple', 'junit:name=simple')
-        assert simple.lookupBeans(agent) == [simple.objectName]
-    }
-}
-
-
-class JmxRemoteBeanGroupTest extends GroovyTestCase {
-    void testCtor() {
-        def model = [remoteBeans: [:]]
-
-        def g0 = JmxRemoteBean.create(model, 'group0', 'junit:*')
-        assert g0.objectName.toString() == 'junit:*'
-        assert g0.filters.isEmpty()
-
-        def g1 = JmxRemoteBean.create(model, 'group1', 'junit:name=*')
-        assert g1.objectName.toString() == 'junit:*'
-        assert g1.filters.size() == 1
-        assert g1.filters.name == ''
-
-        def g2 = JmxRemoteBean.create(model, 'group2', 'junit:literal=const,name=*')
-        assert g2.objectName.toString() == 'junit:literal=const,*'
-        assert g2.filters.size() == 1
-
-        def g3 = JmxRemoteBean.create(model, 'group3', 'junit:name=*,literal=const,connector=http-*')
-        assert g3.objectName.toString() == 'junit:literal=const,*'
-        assert g3.filters.size() == 2
-        assert g3.filters.name == ''
-        assert g3.filters.connector == 'http-'
-    }
-
-    void testToString() {
-        def model = [remoteBeans: [:]]
-        def jrb = new JmxRemoteBeanGroup(model, 'test', new ObjectName('junit:*'))
-        def text = jrb.toString()
-        assert text.contains('filters=[:]')
-    }
-
-    void testLookupBeans() {
-        def model = [remoteBeans: [:]]
-        def passed = [
-            'junit:name=1,connector=http-1',
-            'foo:name=2,connector=http-',
-        ]
-        def filtered = [
-            'junit:name=foo,connector=jk-bar',
-            'junit:name=bar,connector=http',
-            'junit:connector=http-1',
-            'junit:foo=bar',
-        ]
-        def agent = [queryBeans: { dummy, c -> (passed + filtered).each { n -> c(new ObjectName(n), n) } }]
-        def group = JmxRemoteBean.create(model, 'simple', 'junit:name=*,connector=http-*')
-        assert group.lookupBeans(agent) == passed
     }
 }
 

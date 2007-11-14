@@ -20,27 +20,65 @@ package de.web.tools.jagger.jmx.execution;
 import java.lang.management.ManagementFactory;
 
 
+class AttributeEvaluationCategoryTest extends GroovyTestCase {
+    void testNonzero() {
+        use (AttributeEvaluationCategory) {
+            assert 0.nonzero != 0
+            assert 1.nonzero == 1
+            assert 0.nonzero instanceof Integer
+            assert (0.0).nonzero instanceof BigDecimal
+        }
+    }
+
+    void testPercent() {
+        use (AttributeEvaluationCategory) {
+            assert 1.percent == 100.0
+            assert 1.percent instanceof BigDecimal
+            assert (0.00004).percent == 0.00
+            assert (0.00005).percent == 0.01
+        }
+    }
+
+    void testScale() {
+        use (AttributeEvaluationCategory) {
+            assert 1.scale(0) instanceof BigDecimal
+            assert (12345).scale(-2) == 12300
+            assert (1.2345).scale(0) == 1.0
+            assert (1.2345).scale(1) == 1.2
+            assert (1.2345).scale(2) == 1.23
+            assert (1.2344).scale(3) == 1.234
+            assert (1.2346).scale(3) == 1.235
+        }
+    }
+}
+
+
 class RemoteAttributeAccessorTest extends GroovyTestCase {
     void testInjectValues() {
-        def agent = [
-            url: 'test:42',
-            _beans: [new Expando(bar: 47), new Expando(bar: 11),],
+        def poller = [
+            injectValues: { result, agent, attribute ->  result << agent << attribute; result },
         ]
-        def bean = [
-            name: 'foo',
-            lookupBeans: { it._beans },
+        def beanAccessor = [
+            getContext: { [
+                poller: [getBeanPoller: { rb -> poller.rb = rb; poller } ]
+            ] },
+            getRemoteBean: { 'rb' },
         ]
-        def raa = new RemoteAttributeAccessor(remoteBean: bean, attribute: 'bar')
-        def values = raa.injectValues([], agent)
+        def raa = new RemoteAttributeAccessor(beanAccessor, 'bar')
+        def values = raa.injectValues(['foo'], 'agent')
 
-        assert values == [47, 11]
-        bean.lookupBeans = { assert false, "Bean lookup was not cached!" }
-        assert raa.injectValues(values, agent) == [47, 11, 47, 11]
+        assert values == ['foo', 'agent', 'bar']
     }
 
     void testToString() {
-        def bean = [objectName: 'test:name=foo']
-        def raa = new RemoteAttributeAccessor(remoteBean: bean, attribute: 'bar')
+        def remoteBean = [objectName: 'test:name=foo']
+        def beanAccessor = [
+            getContext: { [
+                poller: [getBeanPoller: { [remoteBean: remoteBean] } ]
+            ] },
+            getRemoteBean: { remoteBean },
+        ]
+        def raa = new RemoteAttributeAccessor(beanAccessor, 'bar')
         assert raa.toString().contains('name=foo')
         assert raa.toString().contains('bar')
     }
@@ -49,9 +87,12 @@ class RemoteAttributeAccessorTest extends GroovyTestCase {
 
 class RemoteBeanAccessorTest extends GroovyTestCase {
     void testGetProperty() {
-        def rba = new RemoteBeanAccessor(context: 'context', remoteBean: 'remoteBean')
+        def context = [
+            poller: [getBeanPoller: { rb -> [remoteBean: rb] } ]
+        ]
+        def rba = new RemoteBeanAccessor(context: context, remoteBean: 'remoteBean')
         def foo = rba.foo
-        assert foo.remoteBean == 'remoteBean'
+        assert foo.beanPoller.remoteBean == 'remoteBean'
         assert foo.attribute == 'foo'
     }
 }

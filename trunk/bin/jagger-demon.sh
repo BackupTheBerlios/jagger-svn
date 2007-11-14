@@ -59,6 +59,7 @@ fi
 . "$GROOVY_HOME/bin/startGroovy"
 
 
+JAVA_OPTS="$JAVA_OPTS -server"
 ##JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.class=de.web.tools.jagger.util.LogManager"
 ##JAVA_OPTS="$JAVA_OPTS -Dorg.apache.commons.logging.diagnostics.dest=STDERR"
 JAVA_OPTS="$JAVA_OPTS -Dorg.apache.commons.logging.Log=org.apache.commons.logging.impl.Jdk14Logger"

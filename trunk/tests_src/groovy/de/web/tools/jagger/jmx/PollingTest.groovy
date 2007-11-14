@@ -18,7 +18,7 @@
 package de.web.tools.jagger.jmx.polling;
 
 
-class RemotePollerTest extends GroovyTestCase {
+class PollingContextTest extends GroovyTestCase {
     void testPollInstances() {
         def accessor = new Expando(
             injectValues: { result, agent ->
@@ -26,7 +26,7 @@ class RemotePollerTest extends GroovyTestCase {
                 result
             }
         )
-        def poller = new RemotePoller()
+        def poller = new PollingContext()
 
         def emc = new ExpandoMetaClass(poller.class)
         emc.getAgent = { "gA:$it" }

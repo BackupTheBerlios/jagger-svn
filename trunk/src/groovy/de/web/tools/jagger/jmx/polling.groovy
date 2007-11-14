@@ -64,6 +64,9 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
  *  Base class for named beans on remote JVMs.
  */
 class BeanPoller {
+    // cache for resolved remote mbeans (lists of GroovyMBeans) indexed by bean name
+    private beanCache = [:]
+
     // JMX query if this is a bean group
     private ObjectName groupQuery = null
 
@@ -80,7 +83,7 @@ class BeanPoller {
      *
      *  @param bean The remote bean definition in the model.
      */
-    protected BeanPoller(bean) {
+    public BeanPoller(bean) {
         remoteBean = bean
 
         if (remoteBean.objectName.isPropertyPattern()) {
@@ -154,6 +157,47 @@ class BeanPoller {
             return result
         }
     }
+
+    /**
+     *  Poll all remote beans in the given agent.
+     *
+     *  @param result List the new values get injected into.
+     *  @param agent Remote agent (connection).
+     *  @param attribute Name of attribute to inject.
+     *  @return Extended list.
+     */
+    public injectValues(result, agent, attribute) {
+        def beans
+        synchronized (beanCache) {
+            if (!beanCache.containsKey(agent.url)) {
+                beanCache[agent.url] = [:]
+            }
+            def cachedBeans = beanCache[agent.url]
+            if (!cachedBeans.containsKey(remoteBean.name)) {
+                try {
+                    cachedBeans[remoteBean.name] = lookupBeans(agent)
+                // XXX need to better handle failed servers, at least provide
+                // a list of those as a target bean attribute
+                } catch (java.rmi.ConnectException ex) {
+                    // clear cache for failed instance
+                    beanCache[agent.url] = [:]
+
+                    // return unchanged result
+                    return result
+                }
+                //println "Lookup for '$remoteBean.name' returned ${cachedBeans[remoteBean.name].collect { it.name().canonicalName }.join(', ')}"
+            }
+            beans = cachedBeans[remoteBean.name]
+        }
+
+        beans.each {
+            def val = it.getProperty(attribute)
+            //println "${agent.url}:${it.name().canonicalName}.${attribute} = $val"
+            result << val
+        }
+
+        return result
+    }
 }
 
 
@@ -162,7 +206,7 @@ class BeanPoller {
  *
  *  Has to be thread-safe.
  */
-class RemotePoller {
+class PollingContext {
     // cache for connection facades to remote agents, indexed by URL
     private agentCache = [:]
 
@@ -183,7 +227,12 @@ class RemotePoller {
 
         return agentCache[instance.url]
     }
-    
+
+    public getBeanPoller(remoteBean)
+    {
+        new BeanPoller(remoteBean)
+    }
+
     /**
      *  Poll all defined instances for the values of the given bean attribute
      *  accessor.
