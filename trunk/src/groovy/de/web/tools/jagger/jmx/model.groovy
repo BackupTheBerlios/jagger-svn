@@ -18,6 +18,7 @@
 package de.web.tools.jagger.jmx.model;
 
 import javax.management.ObjectName;
+import de.web.tools.jagger.jmx.JMXAgentFacade;
 
 
 /**
@@ -53,7 +54,7 @@ class JmxInstance {
             this.url = hostname
         } else {
             assert (1..65535).contains(port as Integer), "Illegal port number '${port}'" 
-            this.url = "${hostname}:${port}"
+            this.url = JMXAgentFacade.getCanonicalUrl("${hostname}:${port}")
         }
 
         cluster.children << this

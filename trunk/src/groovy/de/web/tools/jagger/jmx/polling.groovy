@@ -48,6 +48,7 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
             synchronized (alias) {
                 // context for the alias expression is the bean containing it
                 alias.delegate = getAdaptee()
+                alias.resolveStrategy = Closure.DELEGATE_ONLY
                 use(AttributeEvaluationCategory) {
                     result = alias.call(getAdaptee())
                 }
@@ -122,6 +123,7 @@ class BeanPoller {
      *  @return Possibly wrapped bean.
      */
     private withAliases(bean) {
+        assert bean != null
         if (remoteBean.aliases) {
             def proxy = new RemoteBeanAliasEvaluator(aliases: remoteBean.aliases)
             bean = proxy.wrap(bean)
@@ -178,30 +180,52 @@ class BeanPoller {
                 beanCache[agent.url] = [:]
             }
             def cachedBeans = beanCache[agent.url]
-            if (!cachedBeans.containsKey(remoteBean.name)) {
+            if (cachedBeans.containsKey(remoteBean.name)) {
+                beans = cachedBeans[remoteBean.name]
+            } else {
                 try {
-                    cachedBeans[remoteBean.name] = lookupBeans(agent)
-                // XXX need to better handle failed servers, at least provide
-                // a list of those as a target bean attribute
+                    beans = lookupBeans(agent)
                 } catch (java.rmi.ConnectException ex) {
-                    // clear cache for failed instance
-                    beanCache[agent.url] = [:]
+                    failAgent(agent.url, ex)
 
                     // return unchanged result
                     return result
                 }
-                //println "Lookup for '$remoteBean.name' returned ${cachedBeans[remoteBean.name].collect { it.name().canonicalName }.join(', ')}"
+                println "Lookup for '$remoteBean.name' returned ${beans.collect { it.name().canonicalName }.join(', ')}"
+                if (beans) {
+                    cachedBeans[remoteBean.name] = beans
+                }
             }
-            beans = cachedBeans[remoteBean.name]
         }
 
-        beans.each {
-            def val = it.getProperty(attribute)
-            //println "${agent.url}:${it.name().canonicalName}.${attribute} = $val"
-            result << val
+        try {
+            beans.each {
+                def val = it.getProperty(attribute)
+
+                //println "${agent.url}:${it.name().canonicalName}.${attribute} = $val"
+                result << val
+            }
+        } catch (java.rmi.ConnectException ex) {
+            failAgent(agent.url, ex)
+        } catch (javax.management.InstanceNotFoundException ex) {
+            failAgent(agent.url, ex)
         }
 
         return result
+    }
+
+    void clearAgent(jmxUrl) {
+        synchronized (beanCache) {
+            // clear cache for failed instance
+            beanCache.remove(jmxUrl)
+
+            println "Bean $remoteBean.name => ${beanCache.keySet().dump()}"
+        }
+    }
+
+    void failAgent(jmxUrl, ex) {
+        clearAgent(jmxUrl)
+        context.failAgent(jmxUrl, ex)
     }
 }
 
@@ -217,6 +241,9 @@ class PollingContext {
 
     // cache for bean pollers
     private beanCache = [:]
+
+    // map of previously failed instances
+    private failedAgents = [:]
 
 
     /**
@@ -236,8 +263,7 @@ class PollingContext {
         return agentCache[instance.url]
     }
 
-    public synchronized getBeanPoller(remoteBean)
-    {
+    public synchronized getBeanPoller(remoteBean) {
         if (!beanCache.containsKey(remoteBean.name)) {
             beanCache[remoteBean.name] = new BeanPoller(this, remoteBean)
         }
@@ -259,13 +285,26 @@ class PollingContext {
             def agent
             try {
                 agent = getAgent(instance)
-            // XXX need to better handle failed servers, at least provide
-            // a list of those as a target bean attribute
             } catch (java.rmi.ConnectException ex) {
+                failAgent(instance.url, ex)
             } catch (IOException ex) {
+                failAgent(instance.url, ex)
             }
 
             if (agent) {
+                synchronized(this) {
+                    if (failedAgents.containsKey(instance.url)) {
+                        println "Instance $instance.url up again!"
+
+                        // need to clean all bean caches
+                        beanCache.each { name, bean ->
+                            println "Clearing $name with $agent.url"
+                            bean.clearAgent(agent.url)
+                        }
+                        failedAgents.remove(instance.url)
+                    }                            
+                }                            
+
                 ++reachable
                 accessor.injectValues(result, agent)
             }
@@ -276,6 +315,20 @@ class PollingContext {
         }
         //println values
         return values ? values : [0]
+    }
+
+    synchronized void failAgent(jmxUrl, ex) {
+        // XXX need to better handle failed servers, at least provide
+        // a list of those as a target bean attribute
+        println "Instance $jmxUrl failed!"
+
+        // clear cache for failed instance
+        agentCache.remove(jmxUrl)
+
+        failedAgents[jmxUrl] = ex.message
+
+        println "Agents ${agentCache.keySet().dump()}"
+        println "Failed ${failedAgents.keySet().dump()}"
     }
 }
 

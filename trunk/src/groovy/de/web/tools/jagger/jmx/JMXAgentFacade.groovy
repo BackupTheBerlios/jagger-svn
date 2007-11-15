@@ -66,10 +66,7 @@ class JMXAgentFacade {
             }
 
             // if necessary, make full JMX URL from "host:port"
-            def serviceUrl = this.url
-            if (!serviceUrl.startsWith('service:jmx:')) {
-                serviceUrl = "service:jmx:rmi:///jndi/rmi://${serviceUrl}/jmxrmi"
-            }
+            def serviceUrl = getCanonicalUrl(this.url)
 
             // create connection
             def connector = JMXConnectorFactory.connect(new JMXServiceURL(serviceUrl), jmxEnv)
@@ -77,6 +74,20 @@ class JMXAgentFacade {
         }
 
         return jmxConnection
+    }
+
+    /**
+     *  Return fully qualified JMX URL.
+     *
+     *  @param url Either a service:jmx URL or a host:port pair.
+     *  @return Full service:jmx URL.
+     */
+    static getCanonicalUrl(url) {
+        if (!url.startsWith('service:jmx:')) {
+            return "service:jmx:rmi:///jndi/rmi://${url}/jmxrmi"
+        } else {
+            return url
+        }
     }
 
     /**
