@@ -29,12 +29,12 @@ class PollingContextTest extends GroovyTestCase {
         def poller = new PollingContext()
 
         def emc = new ExpandoMetaClass(poller.class)
-        emc.getAgent = { "gA:$it" }
+        emc.getAgent = { [url: "gA:$it"] }
         emc.initialize()
         poller.metaClass = emc
 
-        poller.pollInstances(['test1', 'test2'], accessor).eachWithIndex { val, idx ->
-            assert val == ['iV:gA:test1', 'iV:gA:test2'][idx]
+        poller.pollInstances([[url: 'test1'], [url: 'test2']], accessor).eachWithIndex { val, idx ->
+            assertEquals(['iV:["url":gA:["url":"test1"]]', 'iV:["url":gA:["url":"test2"]]'][idx], val)
         }
     }
 }

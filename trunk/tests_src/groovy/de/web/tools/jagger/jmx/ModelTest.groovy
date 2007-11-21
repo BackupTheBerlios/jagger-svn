@@ -40,21 +40,21 @@ class JmxInstanceTest extends GroovyTestCase {
         CLUSTER.children = []
 
         def ji = new JmxInstance(CLUSTER, 'example.com', 12345)
-        assert ji.cluster == CLUSTER
-        assert ji.url == 'example.com:12345'
-        assert CLUSTER.children == [ji]
+        assertEquals CLUSTER, ji.cluster
+        assert ji.url.contains('//example.com:12345/')
+        assertEquals([ji], CLUSTER.children)
     }
 
     void testUrlCtor() {
         CLUSTER.children = []
 
         def ji = new JmxInstance(CLUSTER, 'service:jmx:foo', 0)
-        assert ji.url == 'service:jmx:foo'
+        assertEquals('service:jmx:foo', ji.url)
     }
 
     void testGetInstances() {
         def ji = new JmxInstance(CLUSTER, 'example.com', 12345)
-        assert ji.instances == [ji]
+        assertEquals([ji], ji.instances)
     }
 
     void testToString() {
@@ -80,24 +80,26 @@ class JmxClusterTest extends GroovyTestCase {
         def model = [clusters: [:], rootCluster: [children: []]]
         def c1 = new JmxCluster(model, model.rootCluster, 'Cluster1')
 
-        assert c1.model == model
-        assert c1.parent == model.rootCluster
-        assert c1.name == 'Cluster1'
+        assertEquals(model, c1.model)
+        assertEquals(model.rootCluster, c1.parent)
+        assertEquals('Cluster1', c1.name)
         assert !c1.children
 
-        assert model.clusters[c1.name] == c1
-        assert model.rootCluster.children == [c1]
+        assertEquals(c1, model.clusters[c1.name])
+        assertEquals([c1], model.rootCluster.children)
     }
 
     void testClusterTree() {
         def c2 = makeTree()
         def c1 = c2.parent
 
-        assert c1.children.size() == 2
-        assert c2.children.size() == 1
-        assert c2.children[0].url == 'example.com:2'
-        assert c2.instances == c2.children
-        assert c1.instances.collect{ it.url } - ['example.com:2', 'example.com:1'] == []
+        assertEquals(c1.children.size(), 2)
+        assertEquals(c2.children.size(), 1)
+        assert c2.children[0].url.contains('//example.com:2/')
+        assertEquals(c2.instances, c2.children)
+        assertEquals([], c1.instances.collect{ it.url } -
+            ['service:jmx:rmi:///jndi/rmi://example.com:2/jmxrmi',
+             'service:jmx:rmi:///jndi/rmi://example.com:1/jmxrmi'])
     }
 
     void testToString() {
@@ -117,13 +119,13 @@ class JmxRemoteBeanTest extends GroovyTestCase {
         def model = [remoteBeans: [:]]
 
         def jrb = new JmxRemoteBean(model, 'test', new ObjectName('junit:name=test'))
-        assert jrb.model == model
-        assert jrb.name == 'test'
-        assert jrb.objectName.toString() == 'junit:name=test'
-        assert model.remoteBeans[jrb.name] == jrb
+        assertEquals(model, jrb.model)
+        assertEquals('test', jrb.name)
+        assertEquals('junit:name=test', jrb.objectName.toString())
+        assertEquals(jrb, model.remoteBeans[jrb.name])
 
         def jrb2 = new JmxRemoteBean(model, 'test2', 'junit:name=test2')
-        assert jrb2.objectName.toString() == 'junit:name=test2'
+        assertEquals('junit:name=test2', jrb2.objectName.toString())
 
         shouldFail(IllegalArgumentException) {
             new JmxRemoteBean(model, 'test', new ObjectName('junit:name=duplicate'))
@@ -145,9 +147,9 @@ class JmxTargetBeanTest extends GroovyTestCase {
         def model = [targetBeans: [:]]
 
         def jtb = new JmxTargetBean(model, 'test')
-        assert jtb.model == model
-        assert jtb.name == 'test'
-        assert model.targetBeans[jtb.name] == jtb
+        assertEquals(model, jtb.model)
+        assertEquals('test', jtb.name)
+        assertEquals(jtb, model.targetBeans[jtb.name])
 
         shouldFail(IllegalArgumentException) {
             new JmxTargetBean(model, 'test')
@@ -176,10 +178,10 @@ class JmxTargetBeanTest extends GroovyTestCase {
 class JmxModelTest extends GroovyTestCase {
     void testCtor() {
         def m = new JmxModel()
-        assert m.clusters[''] == m.rootCluster
+        assertEquals(m.rootCluster, m.clusters[''])
         assert !m.remoteBeans
-        assert m.rootCluster.model == m
-        assert m.rootCluster.parent == null
+        assertEquals(m, m.rootCluster.model)
+        assertEquals(null, m.rootCluster.parent)
         assert !m.targetBeans
     }
 

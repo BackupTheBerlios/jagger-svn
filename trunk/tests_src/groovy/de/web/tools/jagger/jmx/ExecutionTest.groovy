@@ -24,7 +24,7 @@ class AttributeEvaluationCategoryTest extends GroovyTestCase {
     void testNonzero() {
         use (AttributeEvaluationCategory) {
             assert 0.nonzero != 0
-            assert 1.nonzero == 1
+            assertEquals(1, 1.nonzero)
             assert 0.nonzero instanceof Integer
             assert (0.0).nonzero instanceof BigDecimal
         }
@@ -32,22 +32,22 @@ class AttributeEvaluationCategoryTest extends GroovyTestCase {
 
     void testPercent() {
         use (AttributeEvaluationCategory) {
-            assert 1.percent == 100.0
+            assertEquals(100.00, 1.percent)
             assert 1.percent instanceof BigDecimal
-            assert (0.00004).percent == 0.00
-            assert (0.00005).percent == 0.01
+            assertEquals(0.00, (0.00004).percent)
+            assertEquals(0.01, (0.00005).percent)
         }
     }
 
     void testScale() {
         use (AttributeEvaluationCategory) {
             assert 1.scale(0) instanceof BigDecimal
-            assert (12345).scale(-2) == 12300
-            assert (1.2345).scale(0) == 1.0
-            assert (1.2345).scale(1) == 1.2
-            assert (1.2345).scale(2) == 1.23
-            assert (1.2344).scale(3) == 1.234
-            assert (1.2346).scale(3) == 1.235
+            assertEquals(1.23E+4, (12345).scale(-2))
+            assertEquals(1E+0,  (1.2345).scale(0))
+            assertEquals(1.2,   (1.2345).scale(1))
+            assertEquals(1.23,  (1.2345).scale(2))
+            assertEquals(1.234, (1.2344).scale(3))
+            assertEquals(1.235, (1.2346).scale(3))
         }
     }
 }
@@ -67,7 +67,7 @@ class RemoteAttributeAccessorTest extends GroovyTestCase {
         def raa = new RemoteAttributeAccessor(beanAccessor, 'bar')
         def values = raa.injectValues(['foo'], 'agent')
 
-        assert values == ['foo', 'agent', 'bar']
+        assertEquals(['foo', 'agent', 'bar'], values)
     }
 
     void testToString() {
@@ -92,8 +92,8 @@ class RemoteBeanAccessorTest extends GroovyTestCase {
         ]
         def rba = new RemoteBeanAccessor(context: context, remoteBean: 'remoteBean')
         def foo = rba.foo
-        assert foo.beanPoller.remoteBean == 'remoteBean'
-        assert foo.attribute == 'foo'
+        assertEquals('remoteBean', foo.beanPoller.remoteBean)
+        assertEquals('foo', foo.attribute)
     }
 }
 
@@ -114,15 +114,15 @@ class ModelDelegateTest extends GroovyTestCase {
         )
         def md = new ModelDelegate(context: context)
         def val = md."$name"(values)
-        assert val == expected
+        assertEquals(expected, val)
     }
 
     void testGetProperty() {
         def context = new Expando(model: new Expando(remoteBeans: [foo: 'bar']))
         def md = new ModelDelegate(context: context)
         def rba = md.foo
-        assert rba.getContext() == context
-        assert rba.getRemoteBean() == 'bar'
+        assertEquals(context, rba.getContext())
+        assertEquals('bar', rba.getRemoteBean())
     }
 
     void testSum() {
@@ -141,7 +141,7 @@ class ModelDelegateTest extends GroovyTestCase {
     }
 
     void testAvg() {
-        testAggregatorMethod('avg', 29)
+        testAggregatorMethod('avg', 29E+0)
         testAggregatorMethod('avg', null, [])
     }
 
@@ -157,7 +157,7 @@ class ModelDelegateTest extends GroovyTestCase {
 
         testAggregatorMethod('median', 2.5, [4.0, 1.0])
         testAggregatorMethod('median', 2.0, [3.0, 1.0, 2.0])
-        testAggregatorMethod('median', 2.0, [2.0, 3.0, 1.0, 2.0])
+        testAggregatorMethod('median', 2E+0, [2.0, 3.0, 1.0, 2.0])
     }
 }
 
@@ -181,7 +181,7 @@ class ExecutionContextTest extends GroovyTestCase {
         context.register()
 
         beans.eachWithIndex { bean, idx ->
-            assert bean.objectName.getKeyProperty('name') == "b${idx+1}"
+            assertEquals("b${idx+1}", bean.objectName.getKeyProperty('name'))
         }
     }
 
@@ -194,7 +194,7 @@ class ExecutionContextTest extends GroovyTestCase {
             pollInstances: { x, y -> [x, y] },
         ])
 
-        assert context.pollInstances('test3') == [['test1', 'test2'], 'test3']
+        assertEquals([['test1', 'test2'], 'test3'], context.pollInstances('test3'))
     }
 }
 
