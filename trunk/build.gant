@@ -29,8 +29,8 @@ has_groovydoc = !groovyVersion.startsWith('1.0')
 
 // name & version number of the project
 Ant.property(file: 'build.properties')
-def project_name = Ant.project.properties.'project.name'
-def version = Ant.project.properties.'project.version'
+project_name = Ant.project.properties.'project.name'
+version = Ant.project.properties.'project.version'
 Ant.echo(message: "Building ${project_name}-${version} using Groovy $groovyVersion / GAnt $gantVersion")
 
 // declare reference to project folders
@@ -89,12 +89,11 @@ package_formats = [
 
 // name of deliverables
 def artifactName(tag, extension) {
-    // XXX Any way to access the outer scope statically?
-    def project_name = Ant.project.properties.'project.name'
-    def version = Ant.project.properties.'project.version'
-    def groovyVersion = InvokerHelper.getVersion()
-
-    return "${project_name}-${tag}-${version}-groovy-${groovyVersion}.${extension}"
+    def groovyInfo = ''
+    if (tag != 'src') {
+        groovyInfo = "-groovy-${groovyVersion}"
+    }
+    return "${project_name}-${tag}-${version}${groovyInfo}.${extension}"
 }
 
 
