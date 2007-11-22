@@ -315,7 +315,12 @@ target(build: 'Create a build of the project') {
         }
         filterset(refid: 'build-filter')
     }
-    Ant.chmod(dir: build_bin_dir, includes: '*', perm: '+x')
+    Ant.copy(todir: build_bin_dir) {
+        fileset(dir: bin_dir, includes: '*.rc')
+        filterset(refid: 'build-filter')
+    }
+    Ant.chmod(dir: build_bin_dir, includes: '*',    perm: '+x')
+    Ant.chmod(dir: build_bin_dir, includes: '*.rc', perm: '-x')
 
     // copy docs
     Ant.copy(todir: build_doc_dir) {
