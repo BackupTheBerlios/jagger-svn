@@ -16,14 +16,16 @@
 #
 # $Id$
 
+# check debug option
+DEBUG=false
+if test "$1" == "--debug"; then
+    shift
+    DEBUG=true
+fi
+
 # make our own JMX agent available? (used for testing)
 JMX_REMOTE_PORT=$(grep -e '^ *jmx.remote.port *[=:]' jagger.properties 2>/dev/null | sed -e 's/ *jmx.remote.port *[=:] *//g')
 #echo $JMX_REMOTE_PORT; exit 1
-
-if test -z $GROOVY_HOME; then
-    echo >&2 "You must set GROOVY_HOME!"
-    exit 1 
-fi
 
 # Get the fully qualified path to the script
 case $0 in
@@ -48,6 +50,20 @@ done
 # Change ":" chars back to spaces and resolve ".." and ".".
 SCRIPTROOT=$(cd "$(dirname "$(dirname "$(echo "$SCRIPTROOT" | tr : " ")")")" && pwd)
 
+# Set up GROOVY_HOME
+if test -f "$SCRIPTROOT/@share_path@/bin/startGroovy"; then
+    export GROOVY_HOME="$SCRIPTROOT/@share_path@"
+fi
+
+if test -z $GROOVY_HOME; then
+    echo >&2 "You must set GROOVY_HOME!"
+    exit 1 
+fi
+
+if $DEBUG; then
+    echo "DEBUG: GROOVY_HOME=$GROOVY_HOME"
+fi
+
 # Generate the classpath
 CLASSPATH=$(ls -1 $SCRIPTROOT/@lib_path@/*.jar | tr "\n" : | sed -e 's/:$//')${CLASSPATH:+:$CLASSPATH}
 if test -d $SCRIPTROOT/@conf_path@ ; then
@@ -55,8 +71,8 @@ if test -d $SCRIPTROOT/@conf_path@ ; then
 fi
 #echo $CLASSPATH; exit 1
 
-# Start program
-. "$GROOVY_HOME/bin/startGroovy"
+# Set up program startup
+source "$GROOVY_HOME/bin/startGroovy"
 
 ##JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.class=de.web.tools.jagger.util.LogManager"
 ##JAVA_OPTS="$JAVA_OPTS -Dorg.apache.commons.logging.diagnostics.dest=STDERR"
@@ -68,11 +84,29 @@ JAVA_OPTS="$JAVA_OPTS -Dproject.version=@project.version@"
 JAVA_OPTS="$JAVA_OPTS -Dproject.home=$SCRIPTROOT"
 JAVA_OPTS="$JAVA_OPTS -Djagger.repository=$SCRIPTROOT/@share_path@/include"
 
+if $DEBUG; then
+    JAVA_OPTS="$JAVA_OPTS -Dproject.debug=true"
+fi
+
 if test $JMX_REMOTE_PORT; then
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=$JMX_REMOTE_PORT"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=true"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.password.file=$SCRIPTROOT/@conf_path@/jmxremote.password.properties"
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.access.file=$SCRIPTROOT/@conf_path@/jmxremote.access.properties"
+fi
+
+if $DEBUG; then
+    echo DEBUG: startGroovy="$JAVACMD" $JAVA_OPTS \
+                -classpath "$STARTER_CLASSPATH" \
+                -Dprogram.name="$PROGNAME" \
+                -Dgroovy.starter.conf="$GROOVY_CONF" \
+                -Dgroovy.home="$GROOVY_HOME" \
+                -Dtools.jar="$TOOLS_JAR" \
+                $STARTER_MAIN_CLASS \
+                --main $CLASS \
+                --conf "$GROOVY_CONF" \
+                --classpath "$CP" \
+                "$@"
 fi
 
