@@ -87,7 +87,7 @@ package_formats = [
     tgz: [task: 'tar', extension: 'tar.gz',  modename: 'mode',     args: [compression: 'gzip']],
     bz2: [task: 'tar', extension: 'tar.bz2', modename: 'mode',     args: [compression: 'bzip2']],
     zip: [task: 'zip', extension: 'zip',     modename: 'filemode', args: [:]],
-]
+].subMap(Ant.project.properties.'package.formats'.tokenize())
 
 
 // name of deliverables
