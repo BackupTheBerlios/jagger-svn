@@ -18,7 +18,11 @@
 
 source $(dirname $0)/jagger-common.rc
 
-JAVA_OPTS="$JAVA_OPTS -server"
+if $DEBUG; then
+    :
+else
+    JAVA_OPTS="$JAVA_OPTS -server"
+fi
 
 startGroovy @project.package@.Demon "$@"
 
