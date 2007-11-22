@@ -17,6 +17,9 @@
 
 package de.web.tools.jagger.jmx.execution;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.lang.management.ManagementFactory;
 import javax.management.ObjectName;
 import javax.management.Attribute;
@@ -32,9 +35,6 @@ import javax.management.openmbean.OpenMBeanInfoSupport;
 import javax.management.openmbean.OpenMBeanAttributeInfo;
 import javax.management.openmbean.OpenMBeanAttributeInfoSupport;
 import javax.management.openmbean.SimpleType;
-
-//import org.apache.commons.logging.Log;
-//import org.apache.commons.logging.LogFactory;
 
 import de.web.tools.jagger.jmx.polling.BeanPoller;
 import de.web.tools.jagger.jmx.polling.PollingContext;
@@ -290,6 +290,8 @@ class ModelDelegate {
  *  All methods of the DynamicMBean interface MUST be thread-safe.
  */
 class DynamicTargetMBean implements DynamicMBean {
+    private static Log log = LogFactory.getLog(DynamicTargetMBean.class)
+
     // package prefixes to be filtered from stack traces
     private static runtimePackages = [
         'sun.reflect.',

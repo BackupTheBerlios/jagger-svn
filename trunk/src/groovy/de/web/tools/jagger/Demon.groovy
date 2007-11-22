@@ -130,7 +130,7 @@ class Demon extends CLISupport {
      */
     protected mainloop(cli, options) {
         // log proper startup
-        log.info("Jagger demon startup initiated by ${System.getProperty('user.name')}")
+        log.info { "Jagger demon startup initiated by ${System.getProperty('user.name')}" }
 
         def args = options.arguments()
         def configFilename
@@ -175,7 +175,7 @@ class Demon extends CLISupport {
         }
 
         // log proper shutdown
-        log.info("Jagger demon shutdown initiated by ${System.getProperty('user.name')}")
+        log.info { "Jagger demon shutdown initiated by ${System.getProperty('user.name')}" }
 
         return 0
     }

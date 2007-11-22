@@ -17,6 +17,9 @@
 
 package de.web.tools.jagger.jmx;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException;
 import org.apache.commons.logging.LogFactory;
 
@@ -27,6 +30,8 @@ import de.web.tools.jagger.jmx.model.*;
  *  Class with static helpers.
  */
 class JmxConfigHelper {
+    private static Log log = LogFactory.getLog(JmxConfigHelper.class)
+
     /*
      *  Throws an IllegalArgumentException is args doesn't match signature.
      */
@@ -36,11 +41,11 @@ class JmxConfigHelper {
         }
 
         args.eachWithIndex { arg, idx ->
-            //println arg.dump()
+            //log.trace { "arg$idx = ${arg.dump()}" }
             if (!signature[idx].isInstance(arg)) {
                 try {
                     args[idx] = arg.asType(signature[idx])
-                    //println args[idx].dump()
+                    //log.trace { "coerced arg$idx = ${args[idx].dump()}" }
                 } catch (GroovyCastException ex) {
                     throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
                 }
@@ -146,8 +151,7 @@ class TargetBeanCreator {
  *  DSL implementation.
  */
 class JmxConfigReader {
-    //private static log = LogFactory.getLog(JmxConfigReader.class)
-    private static log = new Expando(debug: System.out.&println, info: System.out.&println)
+    private static log = LogFactory.getLog(JmxConfigReader.class)
 
     // include repository directory
     private static includeRepository = System.getProperty('jagger.repository')
@@ -364,7 +368,7 @@ class JmxConfigReader {
      *  @param scriptPath Path to the script to include.
      */
     private void doInclude(scriptPath) {
-        log.debug("Including $scriptPath...")
+        log.debug { "Including $scriptPath..." }
 
         // execute the script by a recursive call
         execScript(scriptPath)
@@ -382,7 +386,7 @@ class JmxConfigReader {
     private void execScript(script) {
         script = resolveScriptName(script)
 
-        log.debug("Loading $script...")
+        log.debug { "Loading $script..." }
         def scriptText = script.text
         def className = script.absolutePath.replaceAll('[^a-zA-Z0-9]', '_')
 

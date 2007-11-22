@@ -25,6 +25,45 @@ import org.apache.commons.cli.GnuParser;
 import de.web.tools.jagger.util.License;
 
 
+class LoggerCategory {
+    static void trace(Log log, Closure message) {
+        if (log.isTraceEnabled()) {
+            log.trace(message.call())
+        }
+    }
+
+    static void debug(Log log, Closure message) {
+        if (log.isDebugEnabled()) {
+            log.debug(message.call())
+        }
+    }
+
+    static void info(Log log, Closure message) {
+        if (log.isInfoEnabled()) {
+            log.info(message.call())
+        }
+    }
+
+    static void warn(Log log, Closure message) {
+        if (log.isWarnEnabled()) {
+            log.warn(message.call())
+        }
+    }
+
+    static void error(Log log, Closure message) {
+        if (log.isErrorEnabled()) {
+            log.error(message.call())
+        }
+    }
+
+    static void fatal(Log log, Closure message) {
+        if (log.isFatalEnabled()) {
+            log.fatal(message.call())
+        }
+    }
+}
+
+
 /**
  *  Command line interface to the JMX text console.
  *  (and later, possibly to the demon via a mode switch).
@@ -68,40 +107,42 @@ abstract class CLISupport {
      *  @return exit code
      */
     protected process(args) {
-        // describe common CLI options
-        def cli = new CliBuilder(
-            usage: "${License.APPNAME} [options]",
-            writer: new PrintWriter(System.out),
-            parser: new GnuParser()
-        )
-        cli.h(longOpt: 'help', 'Show this help message.')
-        cli.v(longOpt: 'version', 'Show version information.')
-        cli.Y(longOpt: 'warranty', 'Show warranty information.')
-        cli.Z(longOpt: 'license', 'Show license information.')
+        use (LoggerCategory) {
+            // describe common CLI options
+            def cli = new CliBuilder(
+                usage: "${License.APPNAME} [options]",
+                writer: new PrintWriter(System.out),
+                parser: new GnuParser()
+            )
+            cli.h(longOpt: 'help', 'Show this help message.')
+            cli.v(longOpt: 'version', 'Show version information.')
+            cli.Y(longOpt: 'warranty', 'Show warranty information.')
+            cli.Z(longOpt: 'license', 'Show license information.')
 
-        // add tool specific options
-        addOptions(cli)
+            // add tool specific options
+            addOptions(cli)
 
-        // parse options and do standard processing
-        def options = cli.parse(args)
-        if (options == null) {
-            println('Error in processing command line options.')
-            return 1
+            // parse options and do standard processing
+            def options = cli.parse(args)
+            if (options == null) {
+                println('Error in processing command line options.')
+                return 1
+            }
+            if (options.h) {
+                // why doesn't CliBuilder offer the "header" parameter?!
+                cli.formatter.printHelp(cli.writer, cli.formatter.defaultWidth,
+                    cli.usage, License.COPYRIGHT + ' \u00A0\nOptions:', cli.options,
+                    cli.formatter.defaultLeftPad, cli.formatter.defaultDescPad, '')
+                cli.writer.flush()
+                return 1
+            }
+            if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
+            if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
+            if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
+
+            // get things going
+            return mainloop(cli, options)
         }
-        if (options.h) {
-            // why doesn't CliBuilder offer the "header" parameter?!
-            cli.formatter.printHelp(cli.writer, cli.formatter.defaultWidth,
-                cli.usage, License.COPYRIGHT + ' \u00A0\nOptions:', cli.options,
-                cli.formatter.defaultLeftPad, cli.formatter.defaultDescPad, '')
-            cli.writer.flush()
-            return 1
-        }
-        if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
-        if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
-        if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
-
-        // get things going
-        return mainloop(cli, options)
     }
 }
 

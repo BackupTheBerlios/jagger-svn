@@ -17,6 +17,9 @@
 
 package de.web.tools.jagger.jmx.polling;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import javax.management.ObjectName;
 
 import de.web.tools.jagger.jmx.JMXAgentFacade;

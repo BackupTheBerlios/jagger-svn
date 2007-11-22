@@ -17,6 +17,9 @@
 
 package de.web.tools.jagger.jmx;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 /**
  *  Facade to remote JVM.
