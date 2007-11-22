@@ -26,6 +26,9 @@ if (!gantVersion) gantVersion = 'N/A'
 // version of Groovy used to build us
 groovyVersion = InvokerHelper.getVersion()
 has_groovydoc = !groovyVersion.startsWith('1.0')
+groovy_jars = [
+    'commons-cli-*.jar',
+]
 
 // name & version number of the project
 Ant.property(file: 'build.properties')
@@ -90,7 +93,7 @@ package_formats = [
 // name of deliverables
 def artifactName(tag, extension) {
     def groovyInfo = ''
-    if (tag != 'src') {
+    if (tag == 'bin') {
         groovyInfo = "-groovy-${groovyVersion}"
     }
     return "${project_name}-${tag}-${version}${groovyInfo}.${extension}"
@@ -341,6 +344,23 @@ target(build: 'Create a build of the project') {
     Ant.copy(todir: build_lib_dir) {
         fileset(dir: lib_dir, includes: '*')
         fileset(dir: jar_cache, includes: jar_dependencies.join(','))
+        fileset(dir: "$groovyHome/embeddable", includes: 'groovy-all-*.jar')
+        fileset(dir: "$groovyHome/lib", includes: groovy_jars.join('.'))
+    }
+
+    // copy essential groovy environment for "all" distribution
+    Ant.mkdir(dir: "$build_share_dir/bin")
+    Ant.copy(todir: "$build_share_dir/bin") {
+        fileset(dir: "$groovyHome/bin", includes: 'startGroovy')
+        filterchain {
+            tokenfilter {
+                 filetokenizer()
+                 replaceregex(pattern: '/lib/groovy-', replace: '/lib/groovy-all-')
+            }
+        }
+    }
+    Ant.copy(todir: build_conf_dir) {
+        fileset(dir: "$groovyHome/conf", includes: 'groovy-starter.conf')
     }
 }
 
@@ -389,16 +409,27 @@ target('package': 'Create a full binary distribution of the project') {
     root = "${project_name}-${version}"
 
     // build distribution files
-    package_formats.each { format, info ->
-        def args = info.args.clone()
-        args.taskName = "bin-${format}"
-        args.destfile = "${target_dir}/${artifactName('bin', info.extension)}"
+    ['bin', 'all'].each { scope ->
+        package_formats.each { format, info ->
+            def args = info.args.clone()
+            args.taskName = "bin-${format}"
+            args.destfile = "${target_dir}/${artifactName(scope, info.extension)}"
 
-        Ant."${info.task}"(args) {
-            Ant."${info.task}fileset"(dir: build_dir, prefix: root,
-                excludes: 'bin/*')
-            Ant."${info.task}fileset"(dir: build_dir, prefix: root,
-                includes: 'bin/*', (info.modename): '755')
+            def excludes = ['bin/*']
+            if (scope != 'all') {
+                excludes << "${lib_path}/groovy-all-*.jar"
+                groovy_jars.each {
+                    excludes << "${lib_path}/$it"
+                }
+                excludes << "${share_path}/bin/*"
+            }
+
+            Ant."${info.task}"(args) {
+                Ant."${info.task}fileset"(dir: build_dir, prefix: root,
+                    excludes: excludes.join(','))
+                Ant."${info.task}fileset"(dir: build_dir, prefix: root,
+                    includes: 'bin/*', (info.modename): '755')
+            }
         }
     }
 }
