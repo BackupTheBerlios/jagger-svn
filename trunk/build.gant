@@ -422,6 +422,7 @@ target('package': 'Create a full binary distribution of the project') {
                     excludes << "${lib_path}/$it"
                 }
                 excludes << "${share_path}/bin/*"
+                excludes << "${conf_path}/groovy-starter.conf"
             }
 
             Ant."${info.task}"(args) {
