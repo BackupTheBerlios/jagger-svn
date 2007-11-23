@@ -195,13 +195,13 @@ class Console extends CLISupport {
 
             // check output file before doing all the work for nothing
             if (!(outputFile.canWrite() || outputFile.absoluteFile.parentFile.canWrite())) {
-                println("FATAL: Can't write to $outputFile")
+                console("FATAL: Can't write to $outputFile")
                 return 1
             }
         }
         
         iterateHosts { jvm ->
-            println "${hash}Connecting to ${jvm.agent.url}..."
+            console "${hash}Connecting to ${jvm.agent.url}..."
         
             def stem = "host.${jvm.agent.url.replace(':','.port.')}"
             jvm.versions.each { k, v ->
@@ -222,7 +222,7 @@ class Console extends CLISupport {
             try {
                 stream = outputFile.newOutputStream()
             } catch (FileNotFoundException ex) {
-                println("FATAL: Can't open $outputFile - ${ex.message}")
+                console("FATAL: Can't open $outputFile - ${ex.message}")
                 return 1
             }
         }
@@ -234,7 +234,7 @@ class Console extends CLISupport {
                 stream.close()
             }
         }
-        println "${hash}Wrote ${versionInfo.size()} properties to ${outputFile ? outputFile : '<STDOUT>'}"
+        console "${hash}Wrote ${versionInfo.size()} properties to ${outputFile ? outputFile : '<STDOUT>'}"
         return 0
     }
 
@@ -251,7 +251,7 @@ class Console extends CLISupport {
         // load merged config
         def configError = setConfig(cli, options)
         if (configError != null) {
-            println("Configuration error: ${configError}")
+            console "Configuration error: ${configError}"
             return 1
         }
 

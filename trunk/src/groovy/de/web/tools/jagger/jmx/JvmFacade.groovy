@@ -72,8 +72,6 @@ class JvmFacade {
         poolBeans = new TreeMap()
         agent.queryBeans('java.lang:type=MemoryPool,*') { name, bean ->
             poolBeans[bean.Name] = bean
-            //println name.dump()
-            //println bean.dump()
         }
 
         // query GC beans

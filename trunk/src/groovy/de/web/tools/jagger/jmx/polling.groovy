@@ -30,6 +30,8 @@ import de.web.tools.jagger.jmx.execution.AttributeEvaluationCategory;
  *  Decorator for remote bean alias evaluation.
  */
 class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
+    private static Log log = LogFactory.getLog(RemoteBeanAliasEvaluator.class)
+
     // alias definitions
     def aliases
 
@@ -44,9 +46,9 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
      */
     public getProperty(String name) {
         def result
-        //println "!!! $name"
+        log.trace { "getProperty for alias $name" }
         if (getAliases().containsKey(name)) {
-            //println "!!! Evaluating $name"
+            log.trace { "Evaluating alias $name" }
             def alias = getAliases()[name]
             synchronized (alias) {
                 // context for the alias expression is the bean containing it
@@ -68,6 +70,8 @@ class RemoteBeanAliasEvaluator extends groovy.util.Proxy {
  *  Poller for named beans on remote JVMs.
  */
 class BeanPoller {
+    private static Log log = LogFactory.getLog(BeanPoller.class)
+
     // polling context
     private context
     
@@ -159,7 +163,7 @@ class BeanPoller {
         } else {
             def result = []
             agent.queryBeans(groupQuery) { name, bean ->
-                //println name
+                log.trace { "JMX query returned $name" }
                 if (passesFilter(name)) {
                     result << withAliases(bean)
                 }
@@ -194,7 +198,7 @@ class BeanPoller {
                     // return unchanged result
                     return result
                 }
-                println "Lookup for '$remoteBean.name' returned ${beans.collect { it.name().canonicalName }.join(', ')}"
+                log.trace { "Lookup for '$remoteBean.name' returned ${beans.collect { it.name().canonicalName }.join(', ')}" }
                 if (beans) {
                     cachedBeans[remoteBean.name] = beans
                 }
@@ -205,7 +209,7 @@ class BeanPoller {
             beans.each {
                 def val = it.getProperty(attribute)
 
-                //println "${agent.url}:${it.name().canonicalName}.${attribute} = $val"
+                log.trace { "${agent.url}:${it.name().canonicalName}.${attribute} = $val" }
                 result << val
             }
         } catch (java.rmi.ConnectException ex) {
@@ -222,7 +226,7 @@ class BeanPoller {
             // clear cache for failed instance
             beanCache.remove(jmxUrl)
 
-            println "Bean $remoteBean.name => ${beanCache.keySet().dump()}"
+            log.trace { "Cache after clean for bean $remoteBean.name => ${beanCache.keySet().dump()}" }
         }
     }
 
@@ -239,6 +243,8 @@ class BeanPoller {
  *  Has to be thread-safe.
  */
 class PollingContext {
+    private static Log log = LogFactory.getLog(PollingContext.class)
+
     // cache for connection facades to remote agents, indexed by URL
     private agentCache = [:]
 
@@ -257,7 +263,7 @@ class PollingContext {
      */
     public synchronized getAgent(instance) {
         if (!agentCache.containsKey(instance.url)) {
-            //println "Connecting to ${instance.toString()}..."
+            log.trace { "Connecting to ${instance.toString()}..." }
             def agent = new JMXAgentFacade(url: instance.url, username: instance.username, password: instance.password)
             agent.openConnection()
             agentCache[instance.url] = agent
@@ -297,11 +303,11 @@ class PollingContext {
             if (agent) {
                 synchronized(this) {
                     if (failedAgents.containsKey(instance.url)) {
-                        println "Instance $instance.url up again!"
+                        log.info { "Instance $instance.url up again!" }
 
                         // need to clean all bean caches
                         beanCache.each { name, bean ->
-                            println "Clearing $name with $agent.url"
+                            log.trace { "Clearing bean $name with $agent.url" }
                             bean.clearAgent(agent.url)
                         }
                         failedAgents.remove(instance.url)
@@ -316,22 +322,23 @@ class PollingContext {
         if (!reachable) {
             throw new IOException("All instances unreachable")
         }
-        //println values
+        
+        log.trace { "polling of ${instances.url.join(', ')} returned $values" }
         return values ? values : [0]
     }
 
     synchronized void failAgent(jmxUrl, ex) {
         // XXX need to better handle failed servers, at least provide
         // a list of those as a target bean attribute
-        println "Instance $jmxUrl failed!"
+        log.warn { "Instance $jmxUrl failed!" }
 
         // clear cache for failed instance
         agentCache.remove(jmxUrl)
 
         failedAgents[jmxUrl] = ex.message
 
-        println "Agents ${agentCache.keySet().dump()}"
-        println "Failed ${failedAgents.keySet().dump()}"
+        log.trace { "Cached agents = ${agentCache.keySet().dump()}" }
+        log.trace { "Failed agents = ${failedAgents.keySet().dump()}" }
     }
 }
 

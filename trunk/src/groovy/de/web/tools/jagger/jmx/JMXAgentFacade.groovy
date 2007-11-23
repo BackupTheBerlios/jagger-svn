@@ -130,10 +130,8 @@ class JMXAgentFacade {
         def conn = openConnection()
 
         conn.queryMBeans(queryName, null).each { mbean ->
-            //println mbean.inspect() + mbean.dump()
             def beanName = mbean.objectName
             def gbean = new GroovyMBean(conn, beanName)
-            //handler('name': beanName, 'mbean': gbean)
             handler(beanName, gbean)
         }
     }

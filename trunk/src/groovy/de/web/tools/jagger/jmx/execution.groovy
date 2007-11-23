@@ -179,6 +179,8 @@ class OperationAccessor extends AttributeAccessorBase {
  *  target bean attribute closures.
  */
 class RemoteBeanAccessor {
+    private static Log log = LogFactory.getLog(RemoteBeanAccessor.class)
+
     // the execution context
     def context
 
@@ -192,7 +194,7 @@ class RemoteBeanAccessor {
      *  @return Accessor for <bean>.<attribute>.
      */
     public Object getProperty(final String attribute) {
-        //println "GET $attribute@${remoteBean.name}"
+        log.trace { "GET remote attr $attribute@${remoteBean.name}" }
         new RemoteAttributeAccessor(this, attribute)
     }    
 }
@@ -205,6 +207,8 @@ class RemoteBeanAccessor {
  *  to be thread-safe.
  */
 class ModelDelegate {
+    private static Log log = LogFactory.getLog(ModelDelegate.class)
+
     // the execution context
     def context
 
@@ -216,7 +220,7 @@ class ModelDelegate {
      *  @return Accessor for <property>.
      */
     public Object getProperty(final String property) {
-        //println "Accessing bean $property"
+        log.trace { "Accessing bean $property" }
         return new RemoteBeanAccessor(context: context, remoteBean: context.model.remoteBeans[property])
     }
 
@@ -353,16 +357,15 @@ class DynamicTargetMBean implements DynamicMBean {
             
             result = result as String
         } catch (Exception ex) {
-            // XXX log evaluation errors to console
-            println 'v' * 78
-            println "Error while evaluating ${bean.name}.$name"
-            println "$ex"
+            // log evaluation errors to console
+            def msg = ["Error while evaluating ${bean.name}.$name"]
+            msg << "$ex"
             ex.stackTrace.each { frame ->
                 if (null == runtimePackages.find { frame.className.startsWith(it) }) {
-                    println "    ${frame}"
+                    msg << "    ${frame}"
                 }
             }
-            println '^' * 78
+            log.error { msg.join('\n    ') }
             throw ex
         }
 

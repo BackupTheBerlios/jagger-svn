@@ -41,11 +41,11 @@ class JmxConfigHelper {
         }
 
         args.eachWithIndex { arg, idx ->
-            //log.trace { "arg$idx = ${arg.dump()}" }
+            log.trace { "arg$idx = ${arg.dump()}" }
             if (!signature[idx].isInstance(arg)) {
                 try {
                     args[idx] = arg.asType(signature[idx])
-                    //log.trace { "coerced arg$idx = ${args[idx].dump()}" }
+                    log.trace { "coerced arg$idx = ${args[idx].dump()}" }
                 } catch (GroovyCastException ex) {
                     throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
                 }

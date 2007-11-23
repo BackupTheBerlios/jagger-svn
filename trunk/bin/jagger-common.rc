@@ -16,10 +16,16 @@
 #
 # $Id$
 
-# check debug option
+# check debug options
 DEBUG=false
 if test "$1" == "--debug"; then
     shift
+    DEBUG=true
+fi
+TRACE=false
+if test "$1" == "--trace"; then
+    shift
+    TRACE=true
     DEBUG=true
 fi
 
@@ -60,7 +66,7 @@ if test -z $GROOVY_HOME; then
     exit 1 
 fi
 
-if $DEBUG; then
+if $TRACE; then
     echo "DEBUG: GROOVY_HOME=$GROOVY_HOME"
 fi
 
@@ -87,6 +93,9 @@ JAVA_OPTS="$JAVA_OPTS -Djagger.repository=$SCRIPTROOT/@share_path@/include"
 if $DEBUG; then
     JAVA_OPTS="$JAVA_OPTS -Dproject.debug=true"
 fi
+if $TRACE; then
+    JAVA_OPTS="$JAVA_OPTS -Dproject.trace=true"
+fi
 
 if test $JMX_REMOTE_PORT; then
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=$JMX_REMOTE_PORT"
@@ -96,8 +105,8 @@ if test $JMX_REMOTE_PORT; then
     JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.access.file=$SCRIPTROOT/@conf_path@/jmxremote.access.properties"
 fi
 
-if $DEBUG; then
-    echo DEBUG: startGroovy="$JAVACMD" $JAVA_OPTS \
+if $TRACE; then
+    echo TRACE: startGroovy="$JAVACMD" $JAVA_OPTS \
                 -classpath "$STARTER_CLASSPATH" \
                 -Dprogram.name="$PROGNAME" \
                 -Dgroovy.starter.conf="$GROOVY_CONF" \

@@ -99,6 +99,32 @@ abstract class CLISupport {
      */
     abstract protected mainloop(cli, options);
 
+    /**
+     *  Check for --debug mode.
+     *
+     *  @return true for debugging mode.
+     */
+    public boolean isDebugging() {
+        System.getProperty('project.debug') == 'true'
+    }
+
+    /**
+     *  Check for --trace mode.
+     *
+     *  @return true for tracing mode.
+     */
+    public boolean isTracing() {
+        System.getProperty('project.trace') == 'true'
+    }
+
+    /**
+     *  Print text to console.
+     *
+     *  @param text Text to print.
+     */
+    public void console(text) {
+        println text
+    }
 
     /**
      *  Process command line options and start mainloop.
@@ -125,7 +151,7 @@ abstract class CLISupport {
             // parse options and do standard processing
             def options = cli.parse(args)
             if (options == null) {
-                println('Error in processing command line options.')
+                console 'Error in processing command line options.'
                 return 1
             }
             if (options.h) {
@@ -136,9 +162,9 @@ abstract class CLISupport {
                 cli.writer.flush()
                 return 1
             }
-            if (options.v) { println "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
-            if (options.Y) { println "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
-            if (options.Z) { println "${License.BANNER}\n${License.LICENSE}" ; return 1 }
+            if (options.v) { console "${License.APPNAME} ${License.APPVERSION}" ; return 1 }
+            if (options.Y) { console "${License.BANNER}\n${License.WARRANTY}" ; return 1 }
+            if (options.Z) { console "${License.BANNER}\n${License.LICENSE}" ; return 1 }
 
             // get things going
             return mainloop(cli, options)

@@ -71,7 +71,7 @@ class Demon extends CLISupport {
             }
             outfile.append("$now;${values.join(CSV_DELIM)}\n")
 
-            println "$now ${Fmt.humanSize(outfile.size())} ${outfile.name}"
+            console "$now ${Fmt.humanSize(outfile.size())} ${outfile.name}"
         }
     }
 
@@ -79,8 +79,8 @@ class Demon extends CLISupport {
         def mbs = ManagementFactory.getPlatformMBeanServer()
         model.targetBeans.values().each { bean ->
             def gmb = new GroovyMBean(mbs, "de.web.management:type=Aggregator,name=${bean.name}")
-            //println gmb.dump()
-            println gmb.name()
+            //console gmb.dump()
+            console gmb.name()
             gmb.info().attributes.each { attr ->
                 def val
                 try {
@@ -89,7 +89,7 @@ class Demon extends CLISupport {
                     val = 'Unavailable'
                 }
                     
-                println "    ${bean.name}.${attr.name} = ${val} '${attr.description}'"
+                console "    ${bean.name}.${attr.name} = ${val} '${attr.description}'"
             }
         }
     }
@@ -101,12 +101,16 @@ class Demon extends CLISupport {
         def count = 0
 
         while (now < endTime) {
+            //if (isDebugging()) {
             print "${'-\\|/'[count % 4]} ${((endTime - now) / 1000) as Integer} secs       \r"
+            //}
             Thread.sleep([interval, endTime - now].min())
             now = System.currentTimeMillis()
             count++
         }
+        //if (isDebugging()) {
         print "${' ' * 78}\r"
+        //}
     }
     
     /**
@@ -118,7 +122,6 @@ class Demon extends CLISupport {
         cli.p(longOpt: 'poll', args: 1, argName: 'DESTDIR', 'Destination directory for poll data.')
         cli.d(longOpt: 'poll-delay', args: 1, argName: 'SECS', 'Wait time between polls.')
     }    
-
 
     /**
      *  Start everything up, coordinate the running threads and
@@ -137,7 +140,7 @@ class Demon extends CLISupport {
         if (args.size() == 1) {
             configFilename = args[0]
         } else {
-            println "FATAL: You must specify exactly one config filename!"
+            console "FATAL: You must specify exactly one config filename!"
             return 1
         }
 
@@ -146,31 +149,37 @@ class Demon extends CLISupport {
         try {
             model = cr.loadModel(configFilename)
         } catch (java.io.FileNotFoundException ex) {
-            println "FATAL: Can't read model from $configFilename (${ex.message})"
+            console "FATAL: Can't read model from $configFilename (${ex.message})"
             return 1
         } catch (ScriptException ex) {
-            println "FATAL: ${ex.message}"
+            console "FATAL: ${ex.message}"
             return 1
         }
-        println '~'*78
-        println model.toString()
-        println '~'*78
+
+        if (isDebugging()) {
+            console '~'*78
+            console model.toString()
+            console '~'*78
+        }
 
         new ExecutionContext(model: model).register()
-        dumpTargetBeans(model)
-        println '~'*78
+
+        if (isDebugging()) {
+            dumpTargetBeans(model)
+            console '~'*78
+        }
 
         if (options.p) {
             while (true) {
                 def start = System.currentTimeMillis()
                 dumpTargetBeansToCSV(model, options.p)
                 def took = System.currentTimeMillis() - start
-                println "Took ${took / 1000.0} secs"
+                log.debug { "CSV poll took ${took / 1000.0} secs" }
 
                 visualWait(1000L * options.d.toLong() - took)
             }
         } else {
-            println 'Waiting forever...'
+            console 'Waiting forever...'
             Thread.sleep(Long.MAX_VALUE)
         }
 
