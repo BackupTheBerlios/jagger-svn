@@ -194,7 +194,9 @@ class RemoteBeanAccessor {
      *  @return Accessor for <bean>.<attribute>.
      */
     public Object getProperty(final String attribute) {
-        log.trace { "GET remote attr $attribute@${remoteBean.name}" }
+        if (log.isTraceEnabled()) {
+            log.trace("GET remote attr $attribute@${remoteBean.name}")
+        }
         new RemoteAttributeAccessor(this, attribute)
     }    
 }
@@ -220,7 +222,9 @@ class ModelDelegate {
      *  @return Accessor for <property>.
      */
     public Object getProperty(final String property) {
-        log.trace { "Accessing bean $property" }
+        if (log.isTraceEnabled()) {
+            log.trace("Accessing bean $property")
+        }
         return new RemoteBeanAccessor(context: context, remoteBean: context.model.remoteBeans[property])
     }
 
@@ -357,15 +361,17 @@ class DynamicTargetMBean implements DynamicMBean {
             
             result = result as String
         } catch (Exception ex) {
-            // log evaluation errors to console
-            def msg = ["Error while evaluating ${bean.name}.$name"]
-            msg << "$ex"
-            ex.stackTrace.each { frame ->
-                if (null == runtimePackages.find { frame.className.startsWith(it) }) {
-                    msg << "    ${frame}"
+            if (log.isErrorEnabled()) {
+                // log evaluation errors to console
+                def msg = ["Error while evaluating ${bean.name}.$name"]
+                msg << "$ex"
+                ex.stackTrace.each { frame ->
+                    if (null == runtimePackages.find { frame.className.startsWith(it) }) {
+                        msg << "    ${frame}"
+                    }
                 }
+                log.error(msg.join('\n    '))
             }
-            log.error { msg.join('\n    ') }
             throw ex
         }
 

@@ -133,7 +133,7 @@ class Demon extends CLISupport {
      */
     protected mainloop(cli, options) {
         // log proper startup
-        log.info { "Jagger demon startup initiated by ${System.getProperty('user.name')}" }
+        log.info("Jagger demon startup initiated by ${System.getProperty('user.name')}")
 
         def args = options.arguments()
         def configFilename
@@ -173,9 +173,11 @@ class Demon extends CLISupport {
             while (true) {
                 def start = System.currentTimeMillis()
                 dumpTargetBeansToCSV(model, options.p)
-                def took = System.currentTimeMillis() - start
-                log.debug { "CSV poll took ${took / 1000.0} secs" }
 
+                def took = System.currentTimeMillis() - start
+                if (log.isDebugEnabled()) {
+                    log.debug("CSV poll took ${took / 1000.0} secs")
+                }
                 visualWait(1000L * options.d.toLong() - took)
             }
         } else {
@@ -184,7 +186,7 @@ class Demon extends CLISupport {
         }
 
         // log proper shutdown
-        log.info { "Jagger demon shutdown initiated by ${System.getProperty('user.name')}" }
+        log.info("Jagger demon shutdown initiated by ${System.getProperty('user.name')}")
 
         return 0
     }

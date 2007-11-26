@@ -41,11 +41,15 @@ class JmxConfigHelper {
         }
 
         args.eachWithIndex { arg, idx ->
-            log.trace { "arg$idx = ${arg.dump()}" }
+            if (log.isTraceEnabled()) {
+                log.trace("arg$idx = ${arg.dump()}")
+            }
             if (!signature[idx].isInstance(arg)) {
                 try {
                     args[idx] = arg.asType(signature[idx])
-                    log.trace { "coerced arg$idx = ${args[idx].dump()}" }
+                    if (log.isTraceEnabled()) {
+                        log.trace("coerced arg$idx = ${args[idx].dump()}")
+                    }
                 } catch (GroovyCastException ex) {
                     throw new IllegalArgumentException("Expected ${signature[idx]} but got ${args.dump()} for argument #$idx!")
                 }
@@ -368,7 +372,9 @@ class JmxConfigReader {
      *  @param scriptPath Path to the script to include.
      */
     private void doInclude(scriptPath) {
-        log.debug { "Including $scriptPath..." }
+        if (log.isDebugEnabled()) {
+            log.debug("Including $scriptPath...")
+        }
 
         // execute the script by a recursive call
         execScript(scriptPath)
@@ -386,7 +392,9 @@ class JmxConfigReader {
     private void execScript(script) {
         script = resolveScriptName(script)
 
-        log.debug { "Loading $script..." }
+        if (log.isDebugEnabled()) {
+            log.debug("Loading $script...")
+        }
         def scriptText = script.text
         def className = script.absolutePath.replaceAll('[^a-zA-Z0-9]', '_')
 
